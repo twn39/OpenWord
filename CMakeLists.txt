@@ -97,6 +97,9 @@ list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 # Define the OpenWord library
 add_library(openword
     src/Document.cpp
+    src/Run.cpp
+    src/Paragraph.cpp
+    src/Table.cpp
 )
 
 # Setup include directories
