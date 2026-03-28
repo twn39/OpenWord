@@ -4,8 +4,16 @@
 #include <gsl/gsl>
 #include <map>
 #include <string>
+#include <fstream>
+#include <filesystem>
 
 namespace openword {
+
+// Helper to open std::ifstream safely using a UTF-8 path across platforms (especially Windows)
+inline void open_ifstream(std::ifstream& stream, const std::string& utf8_path, std::ios_base::openmode mode = std::ios_base::in) {
+    std::filesystem::path p = std::filesystem::u8path(utf8_path);
+    stream.open(p, mode);
+}
 
 inline pugi::xml_node cast_node(void* ptr) {
     Expects(ptr != nullptr);

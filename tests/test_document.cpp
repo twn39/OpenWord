@@ -3,6 +3,8 @@
 #include <pugixml.hpp>
 #include <zip.h>
 #include <string>
+#include <filesystem>
+#include <fstream>
 
 std::string extract_file_from_zip(const std::string& zip_path, const std::string& internal_file) {
     int err = 0;
@@ -450,5 +452,57 @@ TEST_CASE("Image Scaling Validation", "[image]") {
         REQUIRE(std::string(img2.attribute("cy").value()) == "238125");
 
         remove(dummy_img.c_str());
+    }
+}
+
+TEST_CASE("UTF-8 Content and Path Validation", "[utf8]") {
+    openword::Document doc;
+    
+    SECTION("Can handle UTF-8 text and file paths correctly") {
+        // UTF-8 strings
+        std::string text_content = "这是一段带有 UTF-8 中文的测试文本。🌟";
+        std::string utf8_img_name = "测试图片_dummy.jpg";
+        std::string utf8_doc_name = "输出文档_utf8.docx";
+
+        // Create dummy image with a UTF-8 path using C++17 filesystem to be safe on Windows
+        std::filesystem::path img_path = std::filesystem::u8path(utf8_img_name);
+        std::ofstream f(img_path, std::ios::binary);
+        if (f.is_open()) {
+            f.write("fake image data", 15);
+            f.close();
+        }
+        
+        // Add content
+        doc.addParagraph(text_content);
+        auto p = doc.addParagraph();
+        p.addImage(utf8_img_name.c_str());
+
+        // Save using UTF-8 path
+        REQUIRE(doc.save(utf8_doc_name.c_str()) == true);
+
+        // Extract and verify document.xml content
+        std::string doc_xml = extract_file_from_zip(utf8_doc_name, "word/document.xml");
+        pugi::xml_document doc_dom;
+        REQUIRE(doc_dom.load_string(doc_xml.c_str()));
+        
+        auto body = doc_dom.child("w:document").child("w:body");
+        auto p_iter = body.children("w:p").begin();
+        REQUIRE(p_iter->child("w:r").child("w:t").text().get() == text_content);
+
+        // Verify the zip contains the relationship pointing to the image correctly
+        std::string rels_xml = extract_file_from_zip(utf8_doc_name, "word/_rels/document.xml.rels");
+        pugi::xml_document rels_dom;
+        REQUIRE(rels_dom.load_string(rels_xml.c_str()));
+        bool found_rel = false;
+        for (auto rel : rels_dom.child("Relationships").children("Relationship")) {
+            if (std::string(rel.attribute("Type").value()) == "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image") {
+                found_rel = true;
+            }
+        }
+        REQUIRE(found_rel == true);
+
+        // Clean up
+        std::filesystem::remove(img_path);
+        std::filesystem::remove(std::filesystem::u8path(utf8_doc_name));
     }
 }

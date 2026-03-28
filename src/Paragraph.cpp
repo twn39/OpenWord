@@ -8,7 +8,8 @@ namespace openword {
 
 // Returns {width, height} in pixels
 static std::pair<int, int> getImageSize(const std::string& path) {
-    std::ifstream file(path, std::ios::binary);
+    std::ifstream file;
+    open_ifstream(file, path, std::ios::binary);
     if (!file.is_open()) return {0, 0};
 
     unsigned char buf[24];
