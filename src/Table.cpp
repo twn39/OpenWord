@@ -3,8 +3,53 @@
 
 #include <pugixml.hpp>
 #include <stdexcept>
+#include <string>
 
 namespace openword {
+
+static const char* borderStyleToString(BorderStyle style) {
+    switch (style) {
+        case BorderStyle::None: return "none";
+        case BorderStyle::Single: return "single";
+        case BorderStyle::Dashed: return "dashed";
+        case BorderStyle::Dotted: return "dotted";
+        case BorderStyle::Double: return "double";
+        case BorderStyle::Thick: return "thick";
+        default: return "single";
+    }
+}
+
+static void applyBorder(pugi::xml_node borders, const char* borderName, const BorderSettings& bs) {
+    auto b = borders.child(borderName);
+    if (!b) b = borders.append_child(borderName);
+    b.remove_attribute("w:val"); b.append_attribute("w:val") = borderStyleToString(bs.style);
+    b.remove_attribute("w:sz"); b.append_attribute("w:sz") = std::to_string(bs.size).c_str();
+    b.remove_attribute("w:space"); b.append_attribute("w:space") = "0";
+    b.remove_attribute("w:color"); b.append_attribute("w:color") = bs.color.c_str();
+}
+
+Row::Row(void* node) : node_(node) {
+    Expects(node_ != nullptr);
+}
+
+Row& Row::setHeight(int twips, HeightRule rule) {
+    auto n = cast_node(node_);
+    auto trPr = n.child("w:trPr");
+    if (!trPr) trPr = n.prepend_child("w:trPr");
+    auto trHeight = trPr.child("w:trHeight");
+    if (!trHeight) trHeight = trPr.append_child("w:trHeight");
+    
+    trHeight.remove_attribute("w:val");
+    trHeight.append_attribute("w:val") = std::to_string(twips).c_str();
+    
+    trHeight.remove_attribute("w:hRule");
+    const char* ruleStr = "atLeast";
+    if (rule == HeightRule::Exact) ruleStr = "exact";
+    else if (rule == HeightRule::Auto) ruleStr = "auto";
+    trHeight.append_attribute("w:hRule") = ruleStr;
+    
+    return *this;
+}
 
 Cell::Cell(void* node) : node_(node) {
     Expects(node_ != nullptr);
@@ -26,6 +71,72 @@ Paragraph Cell::addParagraph(const std::string& text) {
         para.addRun(text);
     }
     return para;
+}
+
+Cell& Cell::setVerticalAlignment(VerticalAlignment align) {
+    auto n = cast_node(node_);
+    auto tcPr = n.child("w:tcPr");
+    if (!tcPr) tcPr = n.prepend_child("w:tcPr");
+    
+    auto vAlign = tcPr.child("w:vAlign");
+    if (!vAlign) vAlign = tcPr.append_child("w:vAlign");
+    
+    vAlign.remove_attribute("w:val");
+    const char* val = "center";
+    if (align == VerticalAlignment::Top) val = "top";
+    else if (align == VerticalAlignment::Bottom) val = "bottom";
+    vAlign.append_attribute("w:val") = val;
+    
+    return *this;
+}
+
+Cell& Cell::setShading(const std::string& hexColor) {
+    auto n = cast_node(node_);
+    auto tcPr = n.child("w:tcPr");
+    if (!tcPr) tcPr = n.prepend_child("w:tcPr");
+    
+    auto shd = tcPr.child("w:shd");
+    if (!shd) shd = tcPr.append_child("w:shd");
+    
+    shd.remove_attribute("w:val"); shd.append_attribute("w:val") = "clear";
+    shd.remove_attribute("w:color"); shd.append_attribute("w:color") = "auto";
+    shd.remove_attribute("w:fill"); shd.append_attribute("w:fill") = hexColor.c_str();
+    
+    return *this;
+}
+
+Cell& Cell::setWidth(int twips, const std::string& type) {
+    auto n = cast_node(node_);
+    auto tcPr = n.child("w:tcPr");
+    if (!tcPr) tcPr = n.prepend_child("w:tcPr");
+    
+    auto tcW = tcPr.child("w:tcW");
+    if (!tcW) tcW = tcPr.append_child("w:tcW");
+    
+    tcW.remove_attribute("w:w"); tcW.append_attribute("w:w") = std::to_string(twips).c_str();
+    tcW.remove_attribute("w:type"); tcW.append_attribute("w:type") = type.c_str();
+    
+    return *this;
+}
+
+Cell& Cell::setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right) {
+    auto n = cast_node(node_);
+    auto tcPr = n.child("w:tcPr");
+    if (!tcPr) tcPr = n.prepend_child("w:tcPr");
+    
+    auto tcBorders = tcPr.child("w:tcBorders");
+    if (!tcBorders) tcBorders = tcPr.append_child("w:tcBorders");
+    
+    applyBorder(tcBorders, "w:top", top);
+    applyBorder(tcBorders, "w:bottom", bottom);
+    applyBorder(tcBorders, "w:left", left);
+    applyBorder(tcBorders, "w:right", right);
+    
+    return *this;
+}
+
+Cell& Cell::setBorders(const BorderSettings& all) {
+    return setBorders(all, all, all, all);
 }
 
 Table::Table(void* node) : node_(node) {
@@ -56,6 +167,16 @@ Cell Table::cell(int row, int col) {
         tc = tc.next_sibling("w:tc");
     }
     throw std::out_of_range("col index out of range");
+}
+
+Row Table::row(int rowIndex) {
+    auto n = cast_node(node_);
+    auto tr = n.child("w:tr");
+    for (int i = 0; i < rowIndex && tr; ++i) {
+        tr = tr.next_sibling("w:tr");
+    }
+    if (!tr) throw std::out_of_range("row index out of range");
+    return Row(tr.internal_object());
 }
 
 void Table::mergeCells(int startRow, int startCol, int endRow, int endCol) {
@@ -127,6 +248,62 @@ void Table::mergeCells(int startRow, int startCol, int endRow, int endCol) {
         }
         current_row++;
     }
+}
+
+Table& Table::setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right, const BorderSettings& insideH, const BorderSettings& insideV) {
+    auto n = cast_node(node_);
+    auto tblPr = n.child("w:tblPr");
+    if (!tblPr) tblPr = n.prepend_child("w:tblPr");
+    
+    auto tblBorders = tblPr.child("w:tblBorders");
+    if (!tblBorders) tblBorders = tblPr.append_child("w:tblBorders");
+    
+    applyBorder(tblBorders, "w:top", top);
+    applyBorder(tblBorders, "w:bottom", bottom);
+    applyBorder(tblBorders, "w:left", left);
+    applyBorder(tblBorders, "w:right", right);
+    applyBorder(tblBorders, "w:insideH", insideH);
+    applyBorder(tblBorders, "w:insideV", insideV);
+    
+    return *this;
+}
+
+Table& Table::setBorders(const BorderSettings& all) {
+    return setBorders(all, all, all, all, all, all);
+}
+
+Table& Table::setColumnWidth(int colIndex, int twips) {
+    auto n = cast_node(node_);
+    auto tblGrid = n.child("w:tblGrid");
+    if (!tblGrid) tblGrid = n.append_child("w:tblGrid");
+    
+    auto gridCol = tblGrid.child("w:gridCol");
+    for (int i = 0; i < colIndex && gridCol; ++i) {
+        gridCol = gridCol.next_sibling("w:gridCol");
+    }
+    if (!gridCol) {
+        int currentCols = 0;
+        for (auto c : tblGrid.children("w:gridCol")) currentCols++;
+        for (int i = currentCols; i <= colIndex; ++i) {
+            gridCol = tblGrid.append_child("w:gridCol");
+        }
+    }
+    
+    gridCol.remove_attribute("w:w");
+    gridCol.append_attribute("w:w") = std::to_string(twips).c_str();
+    
+    return *this;
+}
+
+Table& Table::setAlignment(gsl::czstring align) {
+    auto n = cast_node(node_);
+    auto tblPr = n.child("w:tblPr");
+    if (!tblPr) tblPr = n.prepend_child("w:tblPr");
+    auto jc = tblPr.child("w:jc");
+    if (!jc) jc = tblPr.append_child("w:jc");
+    jc.remove_attribute("w:val");
+    jc.append_attribute("w:val") = align;
+    return *this;
 }
 
 } // namespace openword

@@ -501,6 +501,42 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::filesystem::remove("test_adv_template.docx");
     }
 
+    
+    SECTION("Advanced Table Formatting") {
+        auto t = doc.addTable(2, 2);
+        
+        // Borders
+        openword::BorderSettings thickBorder{openword::BorderStyle::Thick, 16, "FF0000"};
+        openword::BorderSettings dashedBorder{openword::BorderStyle::Dashed, 8, "00FF00"};
+        t.setBorders(thickBorder, thickBorder, thickBorder, thickBorder, dashedBorder, dashedBorder);
+        
+        // Column widths
+        t.setColumnWidth(0, 2000);
+        t.setColumnWidth(1, 4000);
+        
+        // Row heights
+        t.row(0).setHeight(1000, openword::HeightRule::Exact);
+        
+        // Cell shading and alignment
+        auto c = t.cell(0, 0);
+        c.setShading("DDDDDD");
+        c.setVerticalAlignment(openword::VerticalAlignment::Center);
+        c.addParagraph("Centered Gray");
+        
+        std::string filename = "test_adv_table.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+        
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        REQUIRE(doc_xml.find("w:tblBorders") != std::string::npos);
+        REQUIRE(doc_xml.find("w:val=\"thick\"") != std::string::npos);
+        REQUIRE(doc_xml.find("w:gridCol w:w=\"2000\"") != std::string::npos);
+        REQUIRE(doc_xml.find("w:trHeight w:val=\"1000\" w:hRule=\"exact\"") != std::string::npos);
+        REQUIRE(doc_xml.find("w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"DDDDDD\"") != std::string::npos);
+        REQUIRE(doc_xml.find("w:vAlign w:val=\"center\"") != std::string::npos);
+
+        std::filesystem::remove(filename);
+    }
+
     SECTION("Section Columns") {
         auto p = doc.addParagraph("Col 1...");
         auto s = p.appendSectionBreak();

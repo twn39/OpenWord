@@ -53,6 +53,16 @@ enum class HeaderFooterType {
     Even
 };
 
+enum class BorderStyle { None, Single, Dashed, Dotted, Double, Thick };
+struct BorderSettings {
+    BorderStyle style = BorderStyle::Single;
+    int size = 4; // 1/8 points
+    std::string color = "auto";
+};
+
+enum class VerticalAlignment { Top, Center, Bottom };
+enum class HeightRule { Auto, AtLeast, Exact };
+
 struct Metadata {
     std::string title;
     std::string author;
@@ -136,6 +146,14 @@ private:
  * @brief Represents a Run of text within a paragraph (w:r).
  * This is a lightweight proxy object passed by value.
  */
+class Row {
+public:
+    explicit Row(void* node);
+    Row& setHeight(int twips, HeightRule rule = HeightRule::AtLeast);
+private:
+    void* node_;
+};
+
 class Cell;
 class Table;
 class Run {
@@ -224,6 +242,12 @@ public:
     // --- Content Creation ---
     Paragraph addParagraph(const std::string& text = "");
 
+    Cell& setVerticalAlignment(VerticalAlignment align);
+    Cell& setShading(const std::string& hexColor);
+    Cell& setWidth(int twips, const std::string& type = "dxa");
+    Cell& setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right);
+    Cell& setBorders(const BorderSettings& all);
+
 private:
     void* node_;
 };
@@ -237,7 +261,13 @@ public:
 
     // --- Data Access ---
     Cell cell(int row, int col);
+    Row row(int rowIndex);
     void mergeCells(int startRow, int startCol, int endRow, int endCol);
+    
+    Table& setBorders(const BorderSettings& all);
+    Table& setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right, const BorderSettings& insideH, const BorderSettings& insideV);
+    Table& setColumnWidth(int colIndex, int twips);
+    Table& setAlignment(gsl::czstring align);
 
 private:
     void* node_;
@@ -263,6 +293,12 @@ public:
 
     // --- Content Creation ---
     Paragraph addParagraph(const std::string& text = "");
+
+    Cell& setVerticalAlignment(VerticalAlignment align);
+    Cell& setShading(const std::string& hexColor);
+    Cell& setWidth(int twips, const std::string& type = "dxa");
+    Cell& setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right);
+    Cell& setBorders(const BorderSettings& all);
     Table addTable(int rows, int cols);
     
     // --- DOM Traversal ---
