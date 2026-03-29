@@ -13,7 +13,7 @@
 ## Technical Stack
 
 - **C++17**: Core library implementation.
-- **Rust (2021 Edition)**: LaTeX to MathML conversion (via `latex2mathml`).
+- **Rust (2021 Edition)**: LaTeX to MathML conversion (via `math-core`).
 - **libxslt & libxml2**: MathML to OMML (Word Math) transformations.
 - **pugixml**: High-speed XML parsing and DOM manipulation.
 - **libzip**: Secure `.docx` (ZIP) archive management.
