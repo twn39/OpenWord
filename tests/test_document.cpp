@@ -508,11 +508,10 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         // Borders
         openword::BorderSettings thickBorder{openword::BorderStyle::Thick, 16, "FF0000"};
         openword::BorderSettings dashedBorder{openword::BorderStyle::Dashed, 8, "00FF00"};
-        t.setBorders(thickBorder, thickBorder, thickBorder, thickBorder, dashedBorder, dashedBorder);
+        t.setBorders(thickBorder, dashedBorder);
         
         // Column widths
-        t.setColumnWidth(0, 2000);
-        t.setColumnWidth(1, 4000);
+        t.setColumnWidths({2000, 4000});
         
         // Row heights
         t.row(0).setHeight(1000, openword::HeightRule::Exact);
@@ -520,7 +519,7 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         // Cell shading and alignment
         auto c = t.cell(0, 0);
         c.setShading("DDDDDD");
-        c.setVerticalAlignment(openword::VerticalAlignment::Center);
+        c.setVertAlign(openword::VerticalAlignment::Center);
         c.addParagraph("Centered Gray");
         
         std::string filename = "test_adv_table.docx";

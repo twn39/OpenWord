@@ -73,7 +73,7 @@ Paragraph Cell::addParagraph(const std::string& text) {
     return para;
 }
 
-Cell& Cell::setVerticalAlignment(VerticalAlignment align) {
+Cell& Cell::setVertAlign(VerticalAlignment align) {
     auto n = cast_node(node_);
     auto tcPr = n.child("w:tcPr");
     if (!tcPr) tcPr = n.prepend_child("w:tcPr");
@@ -268,6 +268,10 @@ Table& Table::setBorders(const BorderSettings& top, const BorderSettings& bottom
     return *this;
 }
 
+Table& Table::setBorders(const BorderSettings& outer, const BorderSettings& inner) {
+    return setBorders(outer, outer, outer, outer, inner, inner);
+}
+
 Table& Table::setBorders(const BorderSettings& all) {
     return setBorders(all, all, all, all, all, all);
 }
@@ -292,6 +296,13 @@ Table& Table::setColumnWidth(int colIndex, int twips) {
     gridCol.remove_attribute("w:w");
     gridCol.append_attribute("w:w") = std::to_string(twips).c_str();
     
+    return *this;
+}
+
+Table& Table::setColumnWidths(const std::vector<int>& twipsList) {
+    for (size_t i = 0; i < twipsList.size(); ++i) {
+        setColumnWidth(static_cast<int>(i), twipsList[i]);
+    }
     return *this;
 }
 

@@ -51,32 +51,30 @@ void test_tables() {
     doc.addParagraph("Advanced Table test:");
     auto table = doc.addTable(3, 3);
     
-    // 1. Column Widths
-    table.setColumnWidth(0, 2000);
-    table.setColumnWidth(1, 3000);
-    table.setColumnWidth(2, 4000);
+    // 1. Column Widths (Ergonomic API)
+    table.setColumnWidths({2000, 3000, 4000});
     
     // 2. Row Heights
     table.row(0).setHeight(800, openword::HeightRule::Exact);
     
-    // 3. Borders
+    // 3. Borders (Ergonomic Outer/Inner setup)
     openword::BorderSettings outer{openword::BorderStyle::Thick, 12, "000000"};
     openword::BorderSettings inner{openword::BorderStyle::Dashed, 4, "888888"};
-    table.setBorders(outer, outer, outer, outer, inner, inner);
+    table.setBorders(outer, inner);
     
     // 4. Merge Cells & Alignment
     table.mergeCells(0, 0, 0, 2);
     auto headerCell = table.cell(0, 0);
     headerCell.setShading("E7E6E6"); // Light gray background
-    headerCell.setVerticalAlignment(openword::VerticalAlignment::Center);
+    headerCell.setVertAlign(openword::VerticalAlignment::Center);
     headerCell.addParagraph("Merged Header (Gray, Centered)").setAlignment("center");
     
     // 5. Fill some data
     table.cell(1, 0).addParagraph("Row 2, Col 1").setAlignment("center");
     table.cell(1, 1).addParagraph("Row 2, Col 2\nMultiple lines\nVertical Center");
-    table.cell(1, 1).setVerticalAlignment(openword::VerticalAlignment::Center);
+    table.cell(1, 1).setVertAlign(openword::VerticalAlignment::Center);
     table.cell(1, 2).addParagraph("Bottom aligned");
-    table.cell(1, 2).setVerticalAlignment(openword::VerticalAlignment::Bottom);
+    table.cell(1, 2).setVertAlign(openword::VerticalAlignment::Bottom);
     
     doc.save("test_05_tables.docx");
     fmt::print("- test_05_tables.docx (Tables)\n");

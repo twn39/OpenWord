@@ -242,7 +242,7 @@ public:
     // --- Content Creation ---
     Paragraph addParagraph(const std::string& text = "");
 
-    Cell& setVerticalAlignment(VerticalAlignment align);
+    Cell& setVertAlign(VerticalAlignment align);
     Cell& setShading(const std::string& hexColor);
     Cell& setWidth(int twips, const std::string& type = "dxa");
     Cell& setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right);
@@ -264,9 +264,14 @@ public:
     Row row(int rowIndex);
     void mergeCells(int startRow, int startCol, int endRow, int endCol);
     
+    // --- Ergonomic Table Formatting ---
     Table& setBorders(const BorderSettings& all);
+    Table& setBorders(const BorderSettings& outer, const BorderSettings& inner);
     Table& setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right, const BorderSettings& insideH, const BorderSettings& insideV);
+    
     Table& setColumnWidth(int colIndex, int twips);
+    Table& setColumnWidths(const std::vector<int>& twipsList);
+    
     Table& setAlignment(gsl::czstring align);
 
 private:
@@ -294,7 +299,7 @@ public:
     // --- Content Creation ---
     Paragraph addParagraph(const std::string& text = "");
 
-    Cell& setVerticalAlignment(VerticalAlignment align);
+    Cell& setVertAlign(VerticalAlignment align);
     Cell& setShading(const std::string& hexColor);
     Cell& setWidth(int twips, const std::string& type = "dxa");
     Cell& setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right);
