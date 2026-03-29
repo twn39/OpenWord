@@ -61,6 +61,47 @@ struct Metadata {
     std::string creation_time; // ISO8601
 };
 
+
+class Font {
+public:
+    explicit Font(void* node);
+    Font& setSize(int halfPoints);
+    Font& setBold(bool val = true);
+    Font& setItalic(bool val = true);
+    Font& setColor(const std::string& hexColor);
+    Font& setName(const std::string& ascii);
+private:
+    void* node_;
+};
+
+class ParagraphFormat {
+public:
+    explicit ParagraphFormat(void* node);
+    ParagraphFormat& setOutlineLevel(int level);
+    ParagraphFormat& setSpacing(int beforeTwips, int afterTwips);
+private:
+    void* node_;
+};
+
+class Style {
+public:
+    explicit Style(void* node);
+    Font getFont();
+    ParagraphFormat getParagraphFormat();
+    Style& setName(const std::string& name);
+private:
+    void* node_;
+};
+
+class StyleCollection {
+public:
+    explicit StyleCollection(void* node);
+    Style get(const std::string& styleId);
+    Style add(const std::string& styleId, const std::string& type = "paragraph");
+private:
+    void* node_;
+};
+
 class Paragraph;
 class Header {
 public:
@@ -208,7 +249,9 @@ private:
 class Document {
 public:
     Document();
+    explicit Document(const std::string& templatePath);
     ~Document();
+
 
     // Disable copy for safety (RAII)
     Document(const Document&) = delete;
@@ -234,8 +277,10 @@ public:
     int createFootnote(const std::string& text);
     int createEndnote(const std::string& text);
     
+    StyleCollection styles();
+    
     /**
-     * @brief Define a basic paragraph style
+
      * @param styleId Unique ID for the style (e.g., "Heading1")
      * @param name Human-readable name
      */

@@ -22,6 +22,8 @@ struct Document::Impl {
     pugi::xml_node styles_root;
     RelationshipManager doc_rels;
     bool has_styles = false;
+        pugi::xml_document numbering_doc;
+    bool has_numbering = false;
 
     Metadata metadata;
     bool has_metadata = false;
@@ -97,6 +99,37 @@ struct Document::Impl {
 };
 
 Document::Document() : pimpl(std::make_unique<Impl>()) { pimpl->initialize(); }
+
+Document::Document(const std::string& templatePath) : pimpl(std::make_unique<Impl>()) {
+    pimpl->initialize(); // Set up basic empty doc structure
+    
+    int error = 0;
+    zip_t* z = zip_open(templatePath.c_str(), ZIP_RDONLY, &error);
+    if (z) {
+        auto read_xml_from_zip = [&](const char* filename, pugi::xml_document& target_doc) -> bool {
+            zip_stat_t st;
+            zip_stat_init(&st);
+            if (zip_stat(z, filename, 0, &st) != 0) return false;
+            zip_file_t* f = zip_fopen(z, filename, 0);
+            if (!f) return false;
+            std::string file_content(st.size, '\0');
+            zip_fread(f, file_content.data(), st.size);
+            zip_fclose(f);
+            return target_doc.load_string(file_content.c_str());
+        };
+
+        // Extract styles and numbering from the template to override the defaults
+        if (read_xml_from_zip("word/styles.xml", pimpl->styles_doc)) {
+            pimpl->styles_root = pimpl->styles_doc.child("w:styles");
+            pimpl->has_styles = true;
+        }
+        
+        if (read_xml_from_zip("word/numbering.xml", pimpl->numbering_doc)) {
+            pimpl->has_numbering = true;
+        }
+        zip_close(z);
+    }
+}
 Document::~Document() = default;
 
 Paragraph Document::addParagraph(const std::string& text) {
@@ -394,6 +427,10 @@ int Document::createEndnote(const std::string& text) {
     auto r2 = p.append_child("w:r");
     r2.append_child("w:t").text().set(text.c_str());
     return id;
+}
+
+StyleCollection Document::styles() {
+    return StyleCollection(pimpl->styles_root.internal_object());
 }
 
 void Document::addTableOfContents(gsl::czstring title, int max_levels) {

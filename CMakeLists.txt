@@ -80,6 +80,7 @@ add_library(openword
     src/Paragraph.cpp
     src/Table.cpp
     src/Section.cpp
+    src/Styles.cpp
     src/MathConverter.cpp
 )
 

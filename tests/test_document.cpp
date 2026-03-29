@@ -258,7 +258,7 @@ TEST_CASE("OOXML Structure Validation", "[ooxml]") {
     openword::Document doc;
     
     SECTION("Validates that output docx contains required OOXML files and valid XML") {
-        doc.addStyle("TestStyle", "A Test Style");
+        doc.styles().add("TestStyle").setName("A Test Style");
         auto p = doc.addParagraph("Paragraph content");
         p.setStyle("TestStyle");
         auto r = p.addRun("Run content");
@@ -473,6 +473,34 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::filesystem::remove(filename);
     }
     
+    
+    SECTION("Template Loading and OOP Style Modification") {
+        {
+            openword::Document baseDoc;
+            auto style = baseDoc.styles().add("MyTheme");
+            style.getFont().setSize(48).setColor("FF0000"); // Red
+            baseDoc.save("temp_template.docx");
+        }
+        
+        {
+            openword::Document doc("temp_template.docx");
+            auto p = doc.addParagraph("Template content");
+            p.setStyle("MyTheme");
+            doc.save("test_adv_template.docx");
+            
+            std::string doc_xml = extract_file_from_zip("test_adv_template.docx", "word/document.xml");
+            REQUIRE(doc_xml.find("w:pStyle w:val=\"MyTheme\"") != std::string::npos);
+            
+            std::string styles_xml = extract_file_from_zip("test_adv_template.docx", "word/styles.xml");
+            REQUIRE(styles_xml.find("w:styleId=\"MyTheme\"") != std::string::npos);
+            REQUIRE(styles_xml.find("w:color w:val=\"FF0000\"") != std::string::npos);
+            REQUIRE(styles_xml.find("w:sz w:val=\"48\"") != std::string::npos);
+        }
+        
+        std::filesystem::remove("temp_template.docx");
+        std::filesystem::remove("test_adv_template.docx");
+    }
+
     SECTION("Section Columns") {
         auto p = doc.addParagraph("Col 1...");
         auto s = p.appendSectionBreak();
