@@ -528,4 +528,53 @@ void Paragraph::addEquation(const std::string& omml) {
     }
 }
 
+void Paragraph::remove() {
+    auto n = cast_node(node_);
+    if (n && n.parent()) {
+        n.parent().remove_child(n);
+    }
+}
+
+Paragraph Paragraph::cloneAfter() {
+    auto n = cast_node(node_);
+    if (!n || !n.parent()) return Paragraph(nullptr);
+    auto cloned = n.parent().insert_copy_after(n, n);
+    return Paragraph(cloned.internal_object());
+}
+
+Paragraph Paragraph::insertParagraphAfter(const std::string& text) {
+    auto n = cast_node(node_);
+    if (!n || !n.parent()) return Paragraph(nullptr);
+    auto p_node = n.parent().insert_child_after("w:p", n);
+    Paragraph para(p_node.internal_object());
+    if (!text.empty()) {
+        para.addRun(text);
+    }
+    return para;
+}
+
+Table Paragraph::insertTableAfter(int rows, int cols) {
+    auto n = cast_node(node_);
+    if (!n || !n.parent()) return Table(nullptr);
+    
+    auto tbl = n.parent().insert_child_after("w:tbl", n);
+    auto tblPr = tbl.append_child("w:tblPr");
+    tblPr.append_child("w:tblStyle").append_attribute("w:val") = "TableGrid";
+    auto tblW = tblPr.append_child("w:tblW");
+    tblW.append_attribute("w:w") = "0";
+    tblW.append_attribute("w:type") = "auto";
+    auto tblBorders = tblPr.append_child("w:tblBorders");
+    
+    for (int i = 0; i < rows; ++i) {
+        auto tr = tbl.append_child("w:tr");
+        for (int j = 0; j < cols; ++j) {
+            auto tc = tr.append_child("w:tc");
+            tc.append_child("w:tcPr").append_child("w:tcW").append_attribute("w:w") = "0";
+            tc.child("w:tcPr").child("w:tcW").append_attribute("w:type") = "auto";
+            tc.append_child("w:p");
+        }
+    }
+    return Table(tbl.internal_object());
+}
+
 } // namespace openword

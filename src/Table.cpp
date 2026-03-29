@@ -342,6 +342,13 @@ int Table::replaceText(const std::string& search, const std::string& replace) {
     return count;
 }
 
+
+int Row::replaceText(const std::string& search, const std::string& replace) {
+    int count = 0;
+    for (auto& c : cells()) count += c.replaceText(search, replace);
+    return count;
+}
+
 // --- Row Extraction ---
 
 std::vector<Cell> Row::cells() const {
@@ -400,6 +407,46 @@ std::string Table::text() const {
     }
     if (!result.empty()) result.pop_back();
     return result;
+}
+
+
+void Row::remove() {
+    auto n = cast_node(node_);
+    if (n && n.parent()) {
+        n.parent().remove_child(n);
+    }
+}
+
+Row Row::cloneAfter() {
+    auto n = cast_node(node_);
+    if (!n || !n.parent()) return Row(nullptr);
+    auto cloned = n.parent().insert_copy_after(n, n);
+    return Row(cloned.internal_object());
+}
+
+void Table::remove() {
+    auto n = cast_node(node_);
+    if (n && n.parent()) {
+        n.parent().remove_child(n);
+    }
+}
+
+Table Table::cloneAfter() {
+    auto n = cast_node(node_);
+    if (!n || !n.parent()) return Table(nullptr);
+    auto cloned = n.parent().insert_copy_after(n, n);
+    return Table(cloned.internal_object());
+}
+
+Paragraph Table::insertParagraphAfter(const std::string& text) {
+    auto n = cast_node(node_);
+    if (!n || !n.parent()) return Paragraph(nullptr);
+    auto p_node = n.parent().insert_child_after("w:p", n);
+    Paragraph para(p_node.internal_object());
+    if (!text.empty()) {
+        para.addRun(text);
+    }
+    return para;
 }
 
 } // namespace openword

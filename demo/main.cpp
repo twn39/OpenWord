@@ -274,6 +274,70 @@ void test_floating_image() {
     fmt::print("- test_14_floating_image.docx (Floating Images)\n");
 }
 
+void test_mutability() {
+    openword::Document doc;
+    
+    doc.addParagraph("This is the mutability and extraction demo.").setStyle("Heading1");
+    
+    // --- 1. Clone Row (Template looping simulation) ---
+    doc.addParagraph("1. Dynamic Table Row Cloning:");
+    auto t = doc.addTable(2, 3);
+    t.setBorders(openword::BorderSettings{openword::BorderStyle::Single, 4, "000000"},
+                 openword::BorderSettings{openword::BorderStyle::Dashed, 2, "888888"});
+                 
+    t.cell(0, 0).addParagraph().addRun("Item ID").setBold(true);
+    t.cell(0, 1).addParagraph().addRun("Name").setBold(true);
+    t.cell(0, 2).addParagraph().addRun("Price").setBold(true);
+    
+    // Create a template row with placeholders
+    auto tmplRow = t.row(1);
+    tmplRow.cells()[0].addParagraph().addRun("{{ID}}").setColor(openword::Color(255, 0, 0)); // Red ID
+    tmplRow.cells()[1].addParagraph("{{NAME}}");
+    tmplRow.cells()[2].addParagraph().addRun("${{PRICE}}").setBold(true);
+    
+    // Simulate database data
+    struct Data { std::string id, name, price; };
+    std::vector<Data> db = {
+        {"001", "Mechanical Keyboard", "150.00"},
+        {"002", "Ergonomic Mouse", "80.00"},
+        {"003", "Curved Monitor", "350.00"}
+    };
+    
+    // Loop and clone
+    for (const auto& rowData : db) {
+        auto newRow = tmplRow.cloneAfter();
+        newRow.replaceText("{{ID}}", rowData.id);
+        newRow.replaceText("{{NAME}}", rowData.name);
+        newRow.replaceText("{{PRICE}}", rowData.price);
+    }
+    
+    // Remove the placeholder template row
+    tmplRow.remove();
+    
+    doc.addParagraph(); // spacing
+    
+    // --- 2. Remove Node ---
+    doc.addParagraph("2. Node Removal Test:");
+    auto p_keep1 = doc.addParagraph("You should see this paragraph.");
+    auto p_remove = doc.addParagraph("THIS PARAGRAPH SHOULD BE INVISIBLE. IT WILL BE DELETED.");
+    auto p_keep2 = doc.addParagraph("And you should see this paragraph right after the first one.");
+    
+    p_remove.remove(); // Nuke it from DOM
+    
+    doc.addParagraph(); // spacing
+
+    // --- 3. Dynamic Insert After ---
+    doc.addParagraph("3. Insertion After Middle Nodes:");
+    auto first = doc.addParagraph("Step 1: Planning");
+    auto third = doc.addParagraph("Step 3: Testing"); // Whoops, forgot step 2
+    
+    // Insert step 2 dynamically between 1 and 3
+    first.insertParagraphAfter().addRun("Step 2: Implementation (Dynamically inserted!)").setColor(openword::Color(0, 0, 255)).setBold(true);
+    
+    doc.save("test_15_mutability.docx");
+    fmt::print("- test_15_mutability.docx (AST Mutability & Looping)\n");
+}
+
 int main() {
     fmt::print("Generating capability test files...\n");
     test_basic_text();
@@ -289,6 +353,7 @@ int main() {
     test_columns_and_whitespace();
     test_replace();
     test_floating_image();
+    test_mutability();
     fmt::print("\nDone! Please verify test_05_tables.docx for the new advanced table layout.\n");
     return 0;
 }

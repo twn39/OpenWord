@@ -162,6 +162,12 @@ public:
     // --- Data Extraction ---
     std::vector<Cell> cells() const;
     std::string text() const;
+    
+    // --- DOM Mutability ---
+    void remove();
+    Row cloneAfter();
+    int replaceText(const std::string& search, const std::string& replace);
+
 private:
     void* node_;
 };
@@ -243,6 +249,12 @@ public:
     std::vector<Run> runs() const;
     std::string text() const;
     int replaceText(const std::string& search, const std::string& replace);
+    
+    // --- DOM Mutability ---
+    void remove();
+    Paragraph cloneAfter();
+    Paragraph insertParagraphAfter(const std::string& text = "");
+    Table insertTableAfter(int rows, int cols);
 
 private:
     void* node_;
@@ -300,6 +312,11 @@ public:
     // --- Data Extraction & Manipulation ---
     int replaceText(const std::string& search, const std::string& replace);
     std::string text() const;
+    
+    // --- DOM Mutability ---
+    void remove();
+    Table cloneAfter();
+    Paragraph insertParagraphAfter(const std::string& text = "");
 
 private:
     void* node_;
@@ -391,6 +408,12 @@ public:
     std::string convertMathMLToOMML(const std::string& mathml) const;
     std::string convertLaTeXToOMML(const std::string& latex) const;
     int replaceText(const std::string& search, const std::string& replace);
+    
+    // --- DOM Mutability ---
+    void remove();
+    Paragraph cloneAfter();
+    Paragraph insertParagraphAfter(const std::string& text = "");
+    Table insertTableAfter(int rows, int cols);
 
 private:
     struct Impl;
