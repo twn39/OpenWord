@@ -239,12 +239,22 @@ void Paragraph::addImage(gsl::czstring image_path, double scale, ImagePosition p
     }
 
     int c = 0;
-    for (auto child : media_store.children()) c++;
-    std::string rid = "rIdMedia" + std::to_string(c + 1);
-
-    auto media_entry = media_store.append_child("media");
-    media_entry.append_attribute("path").set_value(image_path);
-    media_entry.append_attribute("rId").set_value(rid.c_str());
+    std::string rid;
+    // Check for resource pooling (deduplication by path)
+    for (auto child : media_store.children("media")) {
+        c++;
+        if (std::string(child.attribute("path").value()) == image_path) {
+            rid = child.attribute("rId").value();
+        }
+    }
+    
+    // If not found in pool, add it
+    if (rid.empty()) {
+        rid = "rIdMedia" + std::to_string(c + 1);
+        auto media_entry = media_store.append_child("media");
+        media_entry.append_attribute("path").set_value(image_path);
+        media_entry.append_attribute("rId").set_value(rid.c_str());
+    }
 
     auto r = n.append_child("w:r");
     auto drawing = r.append_child("w:drawing");

@@ -381,6 +381,22 @@ void test_advanced_layout() {
     fmt::print("- test_16_advanced_layout.docx (Margins, First/Even/Odd Headers)\n");
 }
 
+void test_resource_pool() {
+    openword::Document doc;
+    
+    doc.addParagraph("This document contains the same image 100 times, but the generated DOCX file should only contain 1 physical image file inside the ZIP archive thanks to Resource Pooling.");
+    
+    auto t = doc.addTable(10, 10);
+    for (int i = 0; i < 10; ++i) {
+        for (int j = 0; j < 10; ++j) {
+            t.cell(i, j).addParagraph().addImage("tests/test.jpg", 0.05);
+        }
+    }
+    
+    doc.save("test_17_resource_pool.docx");
+    fmt::print("- test_17_resource_pool.docx (Image Hash Deduplication & Pooling)\n");
+}
+
 int main() {
     fmt::print("Generating capability test files...\n");
     test_basic_text();
@@ -398,6 +414,7 @@ int main() {
     test_floating_image();
     test_mutability();
     test_advanced_layout();
+    test_resource_pool();
     fmt::print("\nDone! Please verify test_05_tables.docx for the new advanced table layout.\n");
     return 0;
 }
