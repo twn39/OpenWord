@@ -227,6 +227,7 @@ public:
     // --- DOM Traversal & Data Extractors ---
     std::vector<Run> runs() const;
     std::string text() const;
+    int replaceText(const std::string& search, const std::string& replace);
 
 private:
     void* node_;
@@ -247,6 +248,7 @@ public:
     Cell& setWidth(int twips, const std::string& type = "dxa");
     Cell& setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right);
     Cell& setBorders(const BorderSettings& all);
+    int replaceText(const std::string& search, const std::string& replace);
 
 private:
     void* node_;
@@ -273,6 +275,7 @@ public:
     Table& setColumnWidths(const std::vector<int>& twipsList);
     
     Table& setAlignment(gsl::czstring align);
+    int replaceText(const std::string& search, const std::string& replace);
 
 private:
     void* node_;
@@ -330,6 +333,7 @@ public:
     // --- Utilities ---
     std::string convertMathMLToOMML(const std::string& mathml) const;
     std::string convertLaTeXToOMML(const std::string& latex) const;
+    int replaceText(const std::string& search, const std::string& replace);
 
 private:
     struct Impl;

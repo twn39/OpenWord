@@ -412,4 +412,83 @@ void Paragraph::addEndnoteReference(int endnoteId) {
     e_ref.append_attribute("w:id") = std::to_string(endnoteId).c_str();
 }
 
+int Paragraph::replaceText(const std::string& search, const std::string& replace) {
+    if (search.empty()) return 0;
+    
+    auto p_node = cast_node(node_);
+    int replace_count = 0;
+    size_t search_offset = 0;
+    
+    while (true) {
+        std::string full_text;
+        struct TextRun { pugi::xml_node t_node; size_t start_idx; size_t length; std::string text; };
+        std::vector<TextRun> runs;
+        
+        for (auto r = p_node.child("w:r"); r; r = r.next_sibling("w:r")) {
+            for (auto t = r.child("w:t"); t; t = t.next_sibling("w:t")) {
+                std::string val = t.text().get();
+                runs.push_back({t, full_text.size(), val.size(), val});
+                full_text += val;
+            }
+        }
+        
+        size_t match_pos = full_text.find(search, search_offset);
+        if (match_pos == std::string::npos) break; 
+        
+        size_t match_end = match_pos + search.size();
+        
+        bool replacement_inserted = false;
+        for (auto& tr : runs) {
+            size_t r_start = tr.start_idx;
+            size_t r_end = tr.start_idx + tr.length;
+            
+            // If run is completely outside the match, skip
+            if (r_end <= match_pos || r_start >= match_end) continue;
+            
+            std::string new_val;
+            
+            // Preserve text before the match in this run
+            if (r_start < match_pos) {
+                new_val += tr.text.substr(0, match_pos - r_start);
+            }
+            
+            // We want to insert the replacement text in the run that carries the "meat" of the text,
+            // or if it spans multiple, the run that has styling. To be simple and robust:
+            // We'll put it in the FIRST run that overlaps the match, BUT wait:
+            // If the user did p1.addRun("{{"); p1.addRun("NAME").setBold(); p1.addRun("}}");
+            // "NAME" is the middle run. If we put it in the first "{{", it loses the bold.
+            // Better heuristic: Put the replacement in the run that overlaps the CENTER of the match.
+            size_t match_center = match_pos + search.size() / 2;
+            bool is_center_run = (r_start <= match_center && r_end > match_center);
+            
+            // Fallback: if we haven't inserted it by the very last overlapping run, insert it there.
+            bool is_last_overlapping_run = (r_end >= match_end);
+
+            if (!replacement_inserted && (is_center_run || is_last_overlapping_run)) {
+                new_val += replace;
+                replacement_inserted = true;
+            }
+            
+            // Preserve text after the match in this run
+            if (r_end > match_end) {
+                new_val += tr.text.substr(match_end - r_start);
+            }
+            
+            tr.t_node.text().set(new_val.c_str());
+            
+            // Enforce whitespace preservation if necessary
+            if (!new_val.empty() && (new_val.front() == ' ' || new_val.back() == ' ' || new_val.find('\t') != std::string::npos || new_val.find('\n') != std::string::npos)) {
+                if (!tr.t_node.attribute("xml:space")) {
+                    tr.t_node.append_attribute("xml:space") = "preserve";
+                }
+            }
+        }
+        
+        search_offset = match_pos + replace.size(); // Advance to prevent infinite loops
+        replace_count++;
+    }
+    
+    return replace_count;
+}
+
 } // namespace openword

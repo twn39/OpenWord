@@ -184,6 +184,31 @@ void test_columns_and_whitespace() {
     fmt::print("- test_11_columns_space.docx (Columns and Whitespace)\n");
 }
 
+void test_replace() {
+    openword::Document doc;
+    
+    auto p1 = doc.addParagraph();
+    p1.addRun("Dear ");
+    p1.addRun("{{");
+    p1.addRun("NAME").setBold(true).setColor(openword::Color(0, 0, 255)); // Blue
+    p1.addRun("}}");
+    p1.addRun(", thank you for your purchase!");
+
+    auto t = doc.addTable(2, 2);
+    t.cell(0, 0).addParagraph("Invoice Date:");
+    t.cell(0, 1).addParagraph("{{DATE}}");
+    t.cell(1, 0).addParagraph("Amount Due:");
+    t.cell(1, 1).addParagraph("${{AMOUNT}}");
+
+    // Replace text globally across paragraph runs and table cells
+    doc.replaceText("{{NAME}}", "Jane Doe");
+    doc.replaceText("{{DATE}}", "2024-10-01");
+    doc.replaceText("{{AMOUNT}}", "9,999.00");
+
+    doc.save("test_12_replace_text.docx");
+    fmt::print("- test_12_replace_text.docx (Text Replacement Engine)\n");
+}
+
 int main() {
     fmt::print("Generating capability test files...\n");
     test_basic_text();
@@ -197,6 +222,8 @@ int main() {
     test_toc_and_metadata();
     test_links_and_references();
     test_columns_and_whitespace();
+    test_replace();
     fmt::print("\nDone! Please verify test_05_tables.docx for the new advanced table layout.\n");
     return 0;
 }
+

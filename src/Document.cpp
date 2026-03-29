@@ -513,4 +513,41 @@ std::vector<Paragraph> Document::paragraphs() const {
     return result;
 }
 
+int Document::replaceText(const std::string& search, const std::string& replace) {
+    int count = 0;
+    
+    // Replace in body paragraphs and tables
+    for (auto node : pimpl->body.children()) {
+        std::string name = node.name();
+        if (name == "w:p") {
+            count += Paragraph(node.internal_object()).replaceText(search, replace);
+        } else if (name == "w:tbl") {
+            count += Table(node.internal_object()).replaceText(search, replace);
+        }
+    }
+    
+    // Replace in headers and footers
+    auto parts = pimpl->doc.child("w:document").child("openword_parts");
+    if (parts) {
+        for (auto part : parts.children("part")) {
+            for (auto rootNode : part.children()) {
+                std::string rootName = rootNode.name();
+                if (rootName == "w:hdr" || rootName == "w:ftr") {
+                    for (auto node : rootNode.children()) {
+                        std::string name = node.name();
+                        if (name == "w:p") {
+                            count += Paragraph(node.internal_object()).replaceText(search, replace);
+                        } else if (name == "w:tbl") {
+                            count += Table(node.internal_object()).replaceText(search, replace);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    return count;
+}
+
 } // namespace openword
+

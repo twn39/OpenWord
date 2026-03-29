@@ -317,4 +317,30 @@ Table& Table::setAlignment(gsl::czstring align) {
     return *this;
 }
 
+int Cell::replaceText(const std::string& search, const std::string& replace) {
+    int count = 0;
+    auto n = cast_node(node_);
+    for (auto child : n.children()) {
+        std::string name = child.name();
+        if (name == "w:p") {
+            count += Paragraph(child.internal_object()).replaceText(search, replace);
+        } else if (name == "w:tbl") {
+            count += Table(child.internal_object()).replaceText(search, replace);
+        }
+    }
+    return count;
+}
+
+int Table::replaceText(const std::string& search, const std::string& replace) {
+    int count = 0;
+    auto n = cast_node(node_);
+    for (auto tr = n.child("w:tr"); tr; tr = tr.next_sibling("w:tr")) {
+        for (auto tc = tr.child("w:tc"); tc; tc = tc.next_sibling("w:tc")) {
+            count += Cell(tc.internal_object()).replaceText(search, replace);
+        }
+    }
+    return count;
+}
+
 } // namespace openword
+

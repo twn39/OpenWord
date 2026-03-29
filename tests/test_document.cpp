@@ -536,6 +536,58 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::filesystem::remove(filename);
     }
 
+    
+    SECTION("Intelligent Text Replacement with Style Preservation") {
+        auto p = doc.addParagraph();
+        p.addRun("Hello ");
+        p.addRun("{{");
+        p.addRun("US").setBold(true).setColor(openword::Color(0, 0, 255)); // Blue bold inside the placeholder
+        p.addRun("ER"); // Normal
+        p.addRun("}}");
+        p.addRun(", welcome!");
+
+        auto t = doc.addTable(1, 1);
+        t.cell(0, 0).addParagraph("Invoice for {{USER}} details here.");
+
+        // Create headers and footers to test full-document global search/replace
+        auto sec = doc.finalSection();
+        auto header = sec.addHeader();
+        header.addParagraph("Header: {{USER}}'s Document");
+        
+        auto footer = sec.addFooter();
+        footer.addParagraph("Footer: Approved by {{USER}}.");
+
+        // Action
+        int count = doc.replaceText("{{USER}}", "Alice");
+        REQUIRE(count == 4); // paragraph, table, header, footer
+
+        std::string filename = "test_adv_replace.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+        
+        // 1. Verify main document
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        REQUIRE(doc_xml.find("{{USER}}") == std::string::npos); // Target completely gone
+        REQUIRE(doc_xml.find("Alice") != std::string::npos); // Replaced successfully
+        REQUIRE(doc_xml.find("Invoice for Alice details here") != std::string::npos); // Table replacement works
+        
+        // Verify Style preservation in the heavily fragmented paragraph
+        // 'US' was the center run, so the replacement 'Alice' should be housed inside the run with the 0000FF color.
+        REQUIRE(doc_xml.find("<w:color w:val=\"0000FF\"/>") != std::string::npos);
+        
+        // 2. Verify Header
+        std::string header_xml = extract_file_from_zip(filename, "word/header100.xml");
+        
+        REQUIRE(header_xml.find("{{USER}}") == std::string::npos);
+        REQUIRE(header_xml.find("Header: Alice's Document") != std::string::npos);
+
+        // 3. Verify Footer
+        std::string footer_xml = extract_file_from_zip(filename, "word/footer101.xml");
+        REQUIRE(footer_xml.find("{{USER}}") == std::string::npos);
+        REQUIRE(footer_xml.find("Footer: Approved by Alice.") != std::string::npos);
+
+        std::filesystem::remove(filename);
+    }
+
     SECTION("Section Columns") {
         auto p = doc.addParagraph("Col 1...");
         auto s = p.appendSectionBreak();
