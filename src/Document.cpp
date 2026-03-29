@@ -2,6 +2,7 @@
 #include <set>
 #include <openword/Document.h>
 #include "Internal.h"
+#include "DefaultStyles.h"
 
 // Standard library
 #include <sstream>
@@ -73,12 +74,9 @@ struct Document::Impl {
         pgMar.append_attribute("w:footer") = "720";
         pgMar.append_attribute("w:gutter") = "0";
 
-        auto decl2 = styles_doc.append_child(pugi::node_declaration);
-        decl2.append_attribute("version") = "1.0";
-        decl2.append_attribute("encoding") = "UTF-8";
-        decl2.append_attribute("standalone") = "yes";
-        styles_root = styles_doc.append_child("w:styles");
-        styles_root.append_attribute("xmlns:w") = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        styles_doc.load_string(DEFAULT_STYLES_XML);
+        styles_root = styles_doc.child("w:styles");
+        has_styles = true;
 
         auto f_decl = footnotes_doc.append_child(pugi::node_declaration);
         f_decl.append_attribute("version") = "1.0";
@@ -370,8 +368,9 @@ int Document::createFootnote(const std::string& text) {
     auto r1 = p.append_child("w:r");
     r1.append_child("w:rPr").append_child("w:rStyle").append_attribute("w:val") = "FootnoteReference";
     r1.append_child("w:footnoteRef");
+    auto rSpace = p.append_child("w:r");
+    rSpace.append_child("w:t").text().set(" ");
     auto r2 = p.append_child("w:r");
-    r1.append_child("w:t").text().set(" ");
     r2.append_child("w:t").text().set(text.c_str());
     return id;
 }
@@ -386,8 +385,9 @@ int Document::createEndnote(const std::string& text) {
     auto r1 = p.append_child("w:r");
     r1.append_child("w:rPr").append_child("w:rStyle").append_attribute("w:val") = "EndnoteReference";
     r1.append_child("w:endnoteRef");
+    auto rSpace = p.append_child("w:r");
+    rSpace.append_child("w:t").text().set(" ");
     auto r2 = p.append_child("w:r");
-    r1.append_child("w:t").text().set(" ");
     r2.append_child("w:t").text().set(text.c_str());
     return id;
 }
@@ -398,11 +398,7 @@ void Document::addTableOfContents(gsl::czstring title, int max_levels) {
     if (title && title[0] != '\0') {
         auto pTitle = pimpl->body.insert_child_before("w:p", sectPr);
         pTitle.append_child("w:pPr").append_child("w:pStyle").append_attribute("w:val") = "TOCHeading";
-        auto rTitle = pTitle.append_child("w:r");
-        auto rPr = rTitle.append_child("w:rPr");
-        rPr.append_child("w:b"); // bold
-        rPr.append_child("w:sz").append_attribute("w:val") = "32"; // 16pt
-        rTitle.append_child("w:t").text().set(title);
+        pTitle.append_child("w:r").append_child("w:t").text().set(title);
     }
 
     auto sdt = pimpl->body.insert_child_before("w:sdt", sectPr);

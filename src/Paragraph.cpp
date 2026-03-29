@@ -357,10 +357,7 @@ Run Paragraph::addHyperlink(gsl::czstring text, gsl::czstring url) {
     h_node.append_attribute("w:history") = "1";
     
     auto r_node = h_node.append_child("w:r");
-    auto rPr = r_node.append_child("w:rPr");
-    rPr.append_child("w:rStyle").append_attribute("w:val") = "Hyperlink";
-    rPr.append_child("w:color").append_attribute("w:val") = "0563C1";
-    rPr.append_child("w:u").append_attribute("w:val") = "single";
+    r_node.append_child("w:rPr").append_child("w:rStyle").append_attribute("w:val") = "Hyperlink";
     
     Run run_proxy(r_node.internal_object());
     run_proxy.setText(text);
@@ -374,10 +371,7 @@ Run Paragraph::addInternalLink(gsl::czstring text, gsl::czstring bookmarkName) {
     h_node.append_attribute("w:history") = "1";
     
     auto r_node = h_node.append_child("w:r");
-    auto rPr = r_node.append_child("w:rPr");
-    rPr.append_child("w:rStyle").append_attribute("w:val") = "Hyperlink";
-    rPr.append_child("w:color").append_attribute("w:val") = "0563C1";
-    rPr.append_child("w:u").append_attribute("w:val") = "single";
+    r_node.append_child("w:rPr").append_child("w:rStyle").append_attribute("w:val") = "Hyperlink";
 
     Run run_proxy(r_node.internal_object());
     run_proxy.setText(text);
@@ -405,8 +399,7 @@ void Paragraph::insertBookmark(gsl::czstring name) {
 void Paragraph::addFootnoteReference(int footnoteId) {
     auto n = cast_node(node_);
     auto r_node = n.append_child("w:r");
-    auto rPr = r_node.append_child("w:rPr");
-    rPr.append_child("w:rStyle").append_attribute("w:val") = "FootnoteReference";
+    r_node.append_child("w:rPr").append_child("w:rStyle").append_attribute("w:val") = "FootnoteReference";
     auto f_ref = r_node.append_child("w:footnoteReference");
     f_ref.append_attribute("w:id") = std::to_string(footnoteId).c_str();
 }
@@ -414,8 +407,7 @@ void Paragraph::addFootnoteReference(int footnoteId) {
 void Paragraph::addEndnoteReference(int endnoteId) {
     auto n = cast_node(node_);
     auto r_node = n.append_child("w:r");
-    auto rPr = r_node.append_child("w:rPr");
-    rPr.append_child("w:rStyle").append_attribute("w:val") = "EndnoteReference";
+    r_node.append_child("w:rPr").append_child("w:rStyle").append_attribute("w:val") = "EndnoteReference";
     auto e_ref = r_node.append_child("w:endnoteReference");
     e_ref.append_attribute("w:id") = std::to_string(endnoteId).c_str();
 }
