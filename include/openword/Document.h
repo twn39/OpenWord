@@ -53,6 +53,14 @@ enum class HeaderFooterType {
     Even
 };
 
+struct Metadata {
+    std::string title;
+    std::string author;
+    std::string subject;
+    std::string company;
+    std::string creation_time; // ISO8601
+};
+
 class Paragraph;
 class Header {
 public:
@@ -78,6 +86,7 @@ public:
     
     Header addHeader(HeaderFooterType type = HeaderFooterType::Default);
     Footer addFooter(HeaderFooterType type = HeaderFooterType::Default);
+    Section& setColumns(int count, int spaceTwips = 720);
 private:
     void* node_;
 };
@@ -142,11 +151,18 @@ public:
     void addEquation(const std::string& omml);
 
     Paragraph& setStyle(gsl::czstring styleId);
+    Paragraph& setOutlineLevel(int level); // 0 = Level 1 (Heading 1), 1 = Level 2, etc.
     Paragraph& setAlignment(gsl::czstring align); // "left", "center", "right", "both"
     Paragraph& setSpacing(int beforeTwips, int afterTwips, int lineSpacing = -1, gsl::czstring lineRule = "auto");
     Paragraph& setIndentation(int leftTwips, int rightTwips, int firstLineTwips = 0, int hangingTwips = 0);
     Paragraph& setList(ListType type, int level = 0);
     
+    Run addHyperlink(gsl::czstring text, gsl::czstring url);
+    Run addInternalLink(gsl::czstring text, gsl::czstring bookmarkName);
+    void insertBookmark(gsl::czstring name);
+    void addFootnoteReference(int footnoteId);
+    void addEndnoteReference(int endnoteId);
+
     Section appendSectionBreak();
 
     // --- DOM Traversal & Data Extractors ---
@@ -209,6 +225,14 @@ public:
     // --- DOM Traversal ---
     Section finalSection();
     std::vector<Paragraph> paragraphs() const;
+    
+    void setMetadata(const Metadata& meta);
+    Metadata metadata() const;
+
+    void addTableOfContents(gsl::czstring title = "Table of Contents", int max_levels = 3);
+    
+    int createFootnote(const std::string& text);
+    int createEndnote(const std::string& text);
     
     /**
      * @brief Define a basic paragraph style

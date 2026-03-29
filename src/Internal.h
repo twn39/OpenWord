@@ -22,9 +22,9 @@ inline pugi::xml_node cast_node(void* ptr) {
 
 class RelationshipManager {
 public:
-    std::string addRelationship(const std::string& type, const std::string& target, const std::string& forceId = "") {
+    std::string addRelationship(const std::string& type, const std::string& target, const std::string& forceId = "", const std::string& targetMode = "") {
         std::string rId = forceId.empty() ? "rId" + std::to_string(nextId_++) : forceId;
-        relationships_[rId] = {type, target};
+        relationships_[rId] = {type, target, targetMode};
         return rId;
     }
     bool empty() const { return relationships_.empty(); }
@@ -34,11 +34,14 @@ public:
             rel.append_attribute("Id") = id.c_str();
             rel.append_attribute("Type") = data.type.c_str();
             rel.append_attribute("Target") = data.target.c_str();
+            if (!data.targetMode.empty()) {
+                rel.append_attribute("TargetMode") = data.targetMode.c_str();
+            }
         }
     }
     void setNextId(int id) { nextId_ = id; }
 private:
-    struct RelData { std::string type; std::string target; };
+    struct RelData { std::string type; std::string target; std::string targetMode; };
     int nextId_ = 1;
     std::map<std::string, RelData> relationships_;
 };

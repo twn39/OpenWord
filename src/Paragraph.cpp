@@ -74,6 +74,21 @@ Paragraph& Paragraph::setStyle(gsl::czstring styleId) {
     return *this;
 }
 
+Paragraph& Paragraph::setOutlineLevel(int level) {
+    auto n = cast_node(node_);
+    auto pPr = n.child("w:pPr");
+    if (!pPr) {
+        pPr = n.prepend_child("w:pPr");
+    }
+    auto outline = pPr.child("w:outlineLvl");
+    if (!outline) {
+        outline = pPr.append_child("w:outlineLvl");
+    }
+    outline.remove_attribute("w:val");
+    outline.append_attribute("w:val").set_value(std::to_string(level).c_str());
+    return *this;
+}
+
 Paragraph& Paragraph::setAlignment(gsl::czstring align) {
     auto n = cast_node(node_);
     auto pPr = n.child("w:pPr");
@@ -316,6 +331,93 @@ void Paragraph::addImage(gsl::czstring image_path, double scale) {
     if (math_node) {
         n.append_copy(math_node);
     }
-    }
+}
 
-    } // namespace openword
+Run Paragraph::addHyperlink(gsl::czstring text, gsl::czstring url) {
+    auto n = cast_node(node_);
+    auto root = n.root().child("w:document");
+    auto h_store = root.child("openword_hyperlinks");
+    if (!h_store) h_store = root.append_child("openword_hyperlinks");
+    
+    auto rel_id_attr = root.attribute("openword_next_rel_id");
+    if (!rel_id_attr) {
+        rel_id_attr = root.append_attribute("openword_next_rel_id");
+        rel_id_attr.set_value("100");
+    }
+    int rel_id = rel_id_attr.as_int(100);
+    rel_id_attr.set_value(std::to_string(rel_id + 1).c_str());
+    std::string rid_str = "rId" + std::to_string(rel_id);
+    
+    auto h_entry = h_store.append_child("link");
+    h_entry.append_attribute("url") = url;
+    h_entry.append_attribute("rId") = rid_str.c_str();
+    
+    auto h_node = n.append_child("w:hyperlink");
+    h_node.append_attribute("r:id") = rid_str.c_str();
+    h_node.append_attribute("w:history") = "1";
+    
+    auto r_node = h_node.append_child("w:r");
+    auto rPr = r_node.append_child("w:rPr");
+    rPr.append_child("w:rStyle").append_attribute("w:val") = "Hyperlink";
+    rPr.append_child("w:color").append_attribute("w:val") = "0563C1";
+    rPr.append_child("w:u").append_attribute("w:val") = "single";
+    
+    Run run_proxy(r_node.internal_object());
+    run_proxy.setText(text);
+    return run_proxy;
+}
+
+Run Paragraph::addInternalLink(gsl::czstring text, gsl::czstring bookmarkName) {
+    auto n = cast_node(node_);
+    auto h_node = n.append_child("w:hyperlink");
+    h_node.append_attribute("w:anchor") = bookmarkName;
+    h_node.append_attribute("w:history") = "1";
+    
+    auto r_node = h_node.append_child("w:r");
+    auto rPr = r_node.append_child("w:rPr");
+    rPr.append_child("w:rStyle").append_attribute("w:val") = "Hyperlink";
+    rPr.append_child("w:color").append_attribute("w:val") = "0563C1";
+    rPr.append_child("w:u").append_attribute("w:val") = "single";
+
+    Run run_proxy(r_node.internal_object());
+    run_proxy.setText(text);
+    return run_proxy;
+}
+
+void Paragraph::insertBookmark(gsl::czstring name) {
+    auto n = cast_node(node_);
+    auto root = n.root().child("w:document");
+    if (!root.attribute("openword_next_bkmk_id")) {
+        root.append_attribute("openword_next_bkmk_id") = "0";
+    }
+    int bkmk_id = root.attribute("openword_next_bkmk_id").as_int(0);
+    root.attribute("openword_next_bkmk_id").set_value(std::to_string(bkmk_id + 1).c_str());
+    std::string id_str = std::to_string(bkmk_id);
+    
+    auto start = n.append_child("w:bookmarkStart");
+    start.append_attribute("w:id") = id_str.c_str();
+    start.append_attribute("w:name") = name;
+    
+    auto end = n.append_child("w:bookmarkEnd");
+    end.append_attribute("w:id") = id_str.c_str();
+}
+
+void Paragraph::addFootnoteReference(int footnoteId) {
+    auto n = cast_node(node_);
+    auto r_node = n.append_child("w:r");
+    auto rPr = r_node.append_child("w:rPr");
+    rPr.append_child("w:rStyle").append_attribute("w:val") = "FootnoteReference";
+    auto f_ref = r_node.append_child("w:footnoteReference");
+    f_ref.append_attribute("w:id") = std::to_string(footnoteId).c_str();
+}
+
+void Paragraph::addEndnoteReference(int endnoteId) {
+    auto n = cast_node(node_);
+    auto r_node = n.append_child("w:r");
+    auto rPr = r_node.append_child("w:rPr");
+    rPr.append_child("w:rStyle").append_attribute("w:val") = "EndnoteReference";
+    auto e_ref = r_node.append_child("w:endnoteReference");
+    e_ref.append_attribute("w:id") = std::to_string(endnoteId).c_str();
+}
+
+} // namespace openword

@@ -20,6 +20,11 @@ Run& Run::setText(const std::string& text) {
     auto t = n.child("w:t");
     if (!t) t = n.append_child("w:t");
     t.text().set(text.c_str());
+    if (!text.empty() && (text.front() == ' ' || text.back() == ' ' || text.find('\t') != std::string::npos || text.find('\n') != std::string::npos)) {
+        if (!t.attribute("xml:space")) {
+            t.append_attribute("xml:space") = "preserve";
+        }
+    }
     return *this;
 }
 

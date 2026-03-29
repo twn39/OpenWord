@@ -71,8 +71,13 @@ static pugi::xml_node createPart(pugi::xml_node sectPr, const std::string& partT
     auto parts = root.child("openword_parts");
     if (!parts) parts = root.append_child("openword_parts");
     
-    int rel_id = root.attribute("openword_next_rel_id").as_int(100);
-    root.attribute("openword_next_rel_id").set_value(std::to_string(rel_id + 1).c_str());
+    auto rel_id_attr = root.attribute("openword_next_rel_id");
+    if (!rel_id_attr) {
+        rel_id_attr = root.append_attribute("openword_next_rel_id");
+        rel_id_attr.set_value("100");
+    }
+    int rel_id = rel_id_attr.as_int(100);
+    rel_id_attr.set_value(std::to_string(rel_id + 1).c_str());
     std::string rid_str = "rId" + std::to_string(rel_id);
     
     std::string filename = partType + std::to_string(rel_id) + ".xml";
@@ -108,6 +113,22 @@ Header Section::addHeader(HeaderFooterType type) {
 
 Footer Section::addFooter(HeaderFooterType type) {
     return Footer(createPart(cast_node(node_), "footer", type).internal_object());
+}
+
+Section& Section::setColumns(int count, int spaceTwips) {
+    auto n = cast_node(node_);
+    auto cols = n.child("w:cols");
+    if (!cols) {
+        cols = n.append_child("w:cols");
+    }
+    auto& colsNode = cols;
+    if (!colsNode.attribute("w:num")) colsNode.append_attribute("w:num") = std::to_string(count).c_str();
+    else colsNode.attribute("w:num").set_value(std::to_string(count).c_str());
+    
+    if (!colsNode.attribute("w:space")) colsNode.append_attribute("w:space") = std::to_string(spaceTwips).c_str();
+    else colsNode.attribute("w:space").set_value(std::to_string(spaceTwips).c_str());
+    
+    return *this;
 }
 
 } // namespace openword

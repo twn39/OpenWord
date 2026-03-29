@@ -360,3 +360,131 @@ TEST_CASE("UTF-8 Content Validation", "[utf8]") {
 
     std::filesystem::remove(filename);
 }
+
+TEST_CASE("Advanced Document Features Validation", "[advanced]") {
+    openword::Document doc;
+    
+    SECTION("Metadata and Core Properties") {
+        openword::Metadata meta;
+        meta.title = "Test Document API";
+        meta.author = "Antigravity";
+        meta.subject = "C++ Library";
+        doc.setMetadata(meta);
+        
+        std::string filename = "test_adv_meta.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+
+        std::string core_xml = extract_file_from_zip(filename, "docProps/core.xml");
+        REQUIRE_FALSE(core_xml.empty());
+        pugi::xml_document xml;
+        xml.load_string(core_xml.c_str());
+        auto cp = xml.child("cp:coreProperties");
+        REQUIRE(std::string(cp.child("dc:title").text().get()) == "Test Document API");
+        REQUIRE(std::string(cp.child("dc:creator").text().get()) == "Antigravity");
+
+        std::filesystem::remove(filename);
+    }
+    
+    SECTION("Hyperlinks and Multiple ID Management") {
+        auto p = doc.addParagraph("Check this:");
+        p.addHyperlink(" Google", "https://google.com");
+        p.addHyperlink(" GitHub", "https://github.com");
+        p.insertBookmark("MyBookmark");
+        p.addInternalLink(" LinkBack", "MyBookmark");
+        
+        std::string filename = "test_adv_links.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        REQUIRE(doc_xml.find("w:hyperlink") != std::string::npos);
+        REQUIRE(doc_xml.find("Google") != std::string::npos);
+        REQUIRE(doc_xml.find("GitHub") != std::string::npos);
+        REQUIRE(doc_xml.find("w:bookmarkStart") != std::string::npos);
+        
+        std::string rel_xml = extract_file_from_zip(filename, "word/_rels/document.xml.rels");
+        REQUIRE(rel_xml.find("https://google.com") != std::string::npos);
+        REQUIRE(rel_xml.find("https://github.com") != std::string::npos);
+
+        std::filesystem::remove(filename);
+    }
+
+    SECTION("Table of Contents, Outline Levels, and Settings") {
+        doc.addTableOfContents("My TOC", 3);
+        
+        auto p1 = doc.addParagraph();
+        p1.addRun("Chapter 1");
+        p1.setOutlineLevel(0);
+        
+        auto p2 = doc.addParagraph();
+        p2.addRun("Chapter 1.1");
+        p2.setOutlineLevel(1);
+        
+        std::string filename = "test_adv_toc.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        REQUIRE(doc_xml.find("w:sdt") != std::string::npos);
+        REQUIRE(doc_xml.find("w:instrText") != std::string::npos);
+        REQUIRE(doc_xml.find("TOC \\o") != std::string::npos);
+        REQUIRE(doc_xml.find("w:outlineLvl w:val=\"0\"") != std::string::npos);
+        REQUIRE(doc_xml.find("w:outlineLvl w:val=\"1\"") != std::string::npos);
+
+        std::string settings_xml = extract_file_from_zip(filename, "word/settings.xml");
+        REQUIRE(settings_xml.find("w:updateFields w:val=\"true\"") != std::string::npos);
+
+        std::filesystem::remove(filename);
+    }
+
+    SECTION("Whitespace Preservation") {
+        auto p = doc.addParagraph();
+        p.addRun("NoSpace");
+        p.addRun(" LeadingSpace");
+        p.addRun("TrailingSpace ");
+
+        std::string filename = "test_adv_space.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+        
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        REQUIRE(doc_xml.find("xml:space=\"preserve\"") != std::string::npos);
+        REQUIRE(doc_xml.find("> LeadingSpace<") != std::string::npos);
+        REQUIRE(doc_xml.find(">TrailingSpace <") != std::string::npos);
+        
+        std::filesystem::remove(filename);
+    }
+
+    SECTION("Footnotes and Endnotes") {
+        int fnId = doc.createFootnote("This is a footnote text.");
+        auto p = doc.addParagraph("Text with note");
+        p.addFootnoteReference(fnId);
+        
+        std::string filename = "test_adv_notes.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+
+        std::string fn_xml = extract_file_from_zip(filename, "word/footnotes.xml");
+        REQUIRE_FALSE(fn_xml.empty());
+        REQUIRE(fn_xml.find("This is a footnote text.") != std::string::npos);
+        
+        std::string rel_xml = extract_file_from_zip(filename, "word/_rels/document.xml.rels");
+        REQUIRE(rel_xml.find("footnotes.xml") != std::string::npos);
+        
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        REQUIRE(doc_xml.find("w:footnoteReference") != std::string::npos);
+
+        std::filesystem::remove(filename);
+    }
+    
+    SECTION("Section Columns") {
+        auto p = doc.addParagraph("Col 1...");
+        auto s = p.appendSectionBreak();
+        s.setColumns(2, 700);
+        
+        std::string filename = "test_adv_cols.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+        
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        REQUIRE(doc_xml.find("w:cols") != std::string::npos);
+        REQUIRE(doc_xml.find("w:num=\"2\"") != std::string::npos);
+
+        std::filesystem::remove(filename);
+    }
+}
