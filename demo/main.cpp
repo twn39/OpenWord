@@ -397,6 +397,37 @@ void test_resource_pool() {
     fmt::print("- test_17_resource_pool.docx (Image Hash Deduplication & Pooling)\n");
 }
 
+void test_p1_features() {
+    openword::Document doc;
+    
+    // 1. Paragraph Shading and Borders (Code block simulation)
+    doc.addParagraph("This is a standard paragraph. Below is a simulated code block:");
+    auto pCode = doc.addParagraph();
+    pCode.setShading("F4F4F4"); // Light gray background
+    
+    openword::BorderSettings codeBorder{openword::BorderStyle::Single, 8, "A0A0A0"}; // Gray border
+    pCode.setBorders(codeBorder);
+    
+    pCode.addRun("int main() {\n    printf(\"Hello Word!\\n\");\n    return 0;\n}");
+    
+    doc.addParagraph(); // spacing
+
+    // 2. Vector Shape Textbox
+    doc.addParagraph("This paragraph is standard, but there is a floating text box on the right.");
+    
+    // Width: 2 inches (1828800), Height: 1 inch (914400)
+    // Offset X: 4 inches (3657600), Offset Y: 2 inches (1828800)
+    auto textbox = doc.addParagraph().addTextBox(1828800, 914400, 3657600, 1828800);
+    textbox.setFillColor("FFFFE0"); // Light yellow
+    textbox.setLineColor("FF0000"); // Red border
+    
+    textbox.addParagraph().addRun("CONFIDENTIAL").setBold(true).setColor(openword::Color(255, 0, 0));
+    textbox.addParagraph("Do not distribute.");
+    
+    doc.save("test_18_p1_features.docx");
+    fmt::print("- test_18_p1_features.docx (Textboxes & Paragraph Shading)\n");
+}
+
 int main() {
     fmt::print("Generating capability test files...\n");
     test_basic_text();
@@ -415,8 +446,13 @@ int main() {
     test_mutability();
     test_advanced_layout();
     test_resource_pool();
+    test_p1_features();
+
     fmt::print("\nDone! Please verify test_05_tables.docx for the new advanced table layout.\n");
     return 0;
 }
 
+
+#include "openword/Document.h"
+#include <fmt/core.h>
 

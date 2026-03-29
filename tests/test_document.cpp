@@ -657,6 +657,45 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::filesystem::remove(filename);
     }
 
+    
+    SECTION("Paragraph Shading, Borders and VML Textbox") {
+        // 1. Paragraph Borders and Shading
+        auto pCode = doc.addParagraph("Code block");
+        pCode.setShading("F4F4F4");
+        openword::BorderSettings codeBorder{openword::BorderStyle::Single, 8, "A0A0A0"};
+        pCode.setBorders(codeBorder);
+        
+        // 2. VML TextBox
+        auto p = doc.addParagraph("Host paragraph");
+        auto tb = p.addTextBox(1828800, 914400, 100000, 200000);
+        tb.setFillColor("FFFFE0").setLineColor("FF0000");
+        tb.addParagraph("Inside TB");
+        
+        std::string filename = "test_adv_textbox.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+        
+        // --- Validations ---
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        
+        // Validate Paragraph borders
+        REQUIRE(doc_xml.find("w:pBdr") != std::string::npos);
+        REQUIRE(doc_xml.find("w:top w:val=\"single\" w:sz=\"8\" w:space=\"1\" w:color=\"A0A0A0\"") != std::string::npos);
+        REQUIRE(doc_xml.find("w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"F4F4F4\"") != std::string::npos);
+        
+        // Validate VML Textbox existence
+        REQUIRE(doc_xml.find("w:pict") != std::string::npos);
+        REQUIRE(doc_xml.find("v:shape") != std::string::npos);
+        REQUIRE(doc_xml.find("v:textbox") != std::string::npos);
+        REQUIRE(doc_xml.find("w:txbxContent") != std::string::npos);
+        
+        // Validate VML Textbox properties
+        REQUIRE(doc_xml.find("fillcolor=\"#FFFFE0\"") != std::string::npos);
+        REQUIRE(doc_xml.find("strokecolor=\"#FF0000\"") != std::string::npos);
+        REQUIRE(doc_xml.find("Inside TB") != std::string::npos);
+
+        std::filesystem::remove(filename);
+    }
+
     SECTION("Section Columns") {
         auto p = doc.addParagraph("Col 1...");
         auto s = p.appendSectionBreak();

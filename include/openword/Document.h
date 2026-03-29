@@ -208,6 +208,8 @@ private:
  * @brief Represents a Paragraph (w:p).
  * This is a lightweight proxy object passed by value.
  */
+class TextBox;
+
 class Paragraph {
 public:
     explicit Paragraph(void* node); // Internal use
@@ -236,6 +238,14 @@ public:
     Paragraph& setSpacing(int beforeTwips, int afterTwips, int lineSpacing = -1, gsl::czstring lineRule = "auto");
     Paragraph& setIndentation(int leftTwips, int rightTwips, int firstLineTwips = 0, int hangingTwips = 0);
     Paragraph& setList(int numId, int level = 0);
+    
+    // --- Borders & Shading ---
+    Paragraph& setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right);
+    Paragraph& setBorders(const BorderSettings& all);
+    Paragraph& setShading(const std::string& hexColor);
+    
+    // --- Text Box ---
+    TextBox addTextBox(long long widthEMU, long long heightEMU, long long xOffsetEMU = 0, long long yOffsetEMU = 0);
     
     Run addHyperlink(gsl::czstring text, gsl::czstring url);
     Run addInternalLink(gsl::czstring text, gsl::czstring bookmarkName);
@@ -358,6 +368,20 @@ public:
     explicit NumberingCollection(void* node);
     AbstractNumbering addAbstractNumbering(int abstractNumId);
     int addList(int abstractNumId, int restartNumId = -1);
+private:
+    void* node_;
+};
+
+class TextBox {
+public:
+    explicit TextBox(void* node);
+    
+    // TextBox acts as a miniature container
+    Paragraph addParagraph(const std::string& text = "");
+    
+    TextBox& setFillColor(const std::string& hexColor);
+    TextBox& setLineColor(const std::string& hexColor);
+    
 private:
     void* node_;
 };

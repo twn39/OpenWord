@@ -587,4 +587,142 @@ Table Paragraph::insertTableAfter(int rows, int cols) {
     return Table(tbl.internal_object());
 }
 
+
+// ---------------------------------------------------------
+// Paragraph Borders and Shading
+// ---------------------------------------------------------
+
+static void applyParaBorder(pugi::xml_node borders, const char* borderName, const BorderSettings& bs) {
+    auto b = borders.child(borderName);
+    if (!b) b = borders.append_child(borderName);
+    
+    // We must manually duplicate the logic here or share it. 
+    // The previous applyBorder function is static inside Table.cpp.
+    // For safety, let's redefine a local helper.
+    
+    const char* styleStr = "single";
+    switch (bs.style) {
+        case BorderStyle::None: styleStr = "none"; break;
+        case BorderStyle::Single: styleStr = "single"; break;
+        case BorderStyle::Dashed: styleStr = "dashed"; break;
+        case BorderStyle::Dotted: styleStr = "dotted"; break;
+        case BorderStyle::Double: styleStr = "double"; break;
+        case BorderStyle::Thick: styleStr = "thick"; break;
+        default: styleStr = "single"; break;
+    }
+    
+    b.remove_attribute("w:val"); b.append_attribute("w:val") = styleStr;
+    b.remove_attribute("w:sz"); b.append_attribute("w:sz") = std::to_string(bs.size).c_str();
+    b.remove_attribute("w:space"); b.append_attribute("w:space") = "1"; // Default 1 pt spacing for para borders
+    b.remove_attribute("w:color"); b.append_attribute("w:color") = bs.color.c_str();
+}
+
+Paragraph& Paragraph::setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right) {
+    auto n = cast_node(node_);
+    auto pPr = n.child("w:pPr");
+    if (!pPr) pPr = n.prepend_child("w:pPr");
+    
+    auto pBdr = pPr.child("w:pBdr");
+    if (!pBdr) pBdr = pPr.append_child("w:pBdr");
+    
+    applyParaBorder(pBdr, "w:top", top);
+    applyParaBorder(pBdr, "w:bottom", bottom);
+    applyParaBorder(pBdr, "w:left", left);
+    applyParaBorder(pBdr, "w:right", right);
+    
+    return *this;
+}
+
+Paragraph& Paragraph::setBorders(const BorderSettings& all) {
+    return setBorders(all, all, all, all);
+}
+
+Paragraph& Paragraph::setShading(const std::string& hexColor) {
+    auto n = cast_node(node_);
+    auto pPr = n.child("w:pPr");
+    if (!pPr) pPr = n.prepend_child("w:pPr");
+    
+    auto shd = pPr.child("w:shd");
+    if (!shd) shd = pPr.append_child("w:shd");
+    
+    shd.remove_attribute("w:val"); shd.append_attribute("w:val") = "clear";
+    shd.remove_attribute("w:color"); shd.append_attribute("w:color") = "auto";
+    shd.remove_attribute("w:fill"); shd.append_attribute("w:fill") = hexColor.c_str();
+    
+    return *this;
+}
+
+
+// ---------------------------------------------------------
+// TextBox Implementation
+// ---------------------------------------------------------
+
+TextBox Paragraph::addTextBox(long long widthEMU, long long heightEMU, long long xOffsetEMU, long long yOffsetEMU) {
+    auto n = cast_node(node_);
+    
+    // We will use VML (v:shape -> v:textbox -> w:txbxContent) as it is 100% compatible with all Word versions
+    // and requires far fewer verbose namespace definitions than DrawingML wps:wsp.
+    
+    auto r = n.append_child("w:r");
+    auto pict = r.append_child("w:pict");
+    
+    auto shape = pict.append_child("v:shape");
+    shape.append_attribute("type") = "#_x0000_t202"; // Standard TextBox type
+    
+    // Convert EMU to pt for VML CSS style string. 1 pt = 12700 EMU.
+    double widthPt = widthEMU / 12700.0;
+    double heightPt = heightEMU / 12700.0;
+    double xPt = xOffsetEMU / 12700.0;
+    double yPt = yOffsetEMU / 12700.0;
+    
+    std::string style_str = "position:absolute;margin-left:" + std::to_string(xPt) + "pt;margin-top:" + std::to_string(yPt) + 
+                            "pt;width:" + std::to_string(widthPt) + "pt;height:" + std::to_string(heightPt) + "pt;z-index:251658240;";
+    
+    shape.append_attribute("style") = style_str.c_str();
+    shape.append_attribute("fillcolor") = "white"; // default
+    shape.append_attribute("strokecolor") = "black"; // default
+    
+    auto v_textbox = shape.append_child("v:textbox");
+    // Inner margins
+    v_textbox.append_attribute("inset") = "0.1in,0.1in,0.1in,0.1in";
+    
+    auto txbxContent = v_textbox.append_child("w:txbxContent");
+    
+    return TextBox(txbxContent.internal_object());
+}
+
+TextBox::TextBox(void* node) : node_(node) {
+    Expects(node_ != nullptr);
+}
+
+Paragraph TextBox::addParagraph(const std::string& text) {
+    auto n = cast_node(node_);
+    auto p_node = n.append_child("w:p");
+    Paragraph para(p_node.internal_object());
+    if (!text.empty()) {
+        para.addRun(text);
+    }
+    return para;
+}
+
+TextBox& TextBox::setFillColor(const std::string& hexColor) {
+    auto n = cast_node(node_);
+    auto shape = n.parent().parent(); // w:txbxContent -> v:textbox -> v:shape
+    if (shape && std::string(shape.name()) == "v:shape") {
+        shape.remove_attribute("fillcolor");
+        shape.append_attribute("fillcolor") = ("#" + hexColor).c_str();
+    }
+    return *this;
+}
+
+TextBox& TextBox::setLineColor(const std::string& hexColor) {
+    auto n = cast_node(node_);
+    auto shape = n.parent().parent(); // w:txbxContent -> v:textbox -> v:shape
+    if (shape && std::string(shape.name()) == "v:shape") {
+        shape.remove_attribute("strokecolor");
+        shape.append_attribute("strokecolor") = ("#" + hexColor).c_str();
+    }
+    return *this;
+}
+
 } // namespace openword
