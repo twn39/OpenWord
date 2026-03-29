@@ -139,13 +139,13 @@ Paragraph& Paragraph::setIndentation(int leftTwips, int rightTwips, int firstLin
     return *this;
 }
 
-Paragraph& Paragraph::setList(ListType type, int level) {
+Paragraph& Paragraph::setList(int numIdVal, int level) {
     auto n = cast_node(node_);
     auto pPr = n.child("w:pPr");
     if (!pPr) pPr = n.prepend_child("w:pPr");
     auto numPr = pPr.child("w:numPr");
     
-    if (type == ListType::None) {
+    if (numIdVal <= 0) {
         if (numPr) pPr.remove_child(numPr);
         return *this;
     }
@@ -154,19 +154,14 @@ Paragraph& Paragraph::setList(ListType type, int level) {
     
     auto ilvl = numPr.child("w:ilvl");
     if (!ilvl) ilvl = numPr.append_child("w:ilvl");
-    ilvl.attribute("w:val").set_value(std::to_string(level).c_str());
-    if (!ilvl.attribute("w:val")) ilvl.append_attribute("w:val") = std::to_string(level).c_str();
+    ilvl.remove_attribute("w:val");
+    ilvl.append_attribute("w:val") = std::to_string(level).c_str();
     
     auto numId = numPr.child("w:numId");
     if (!numId) numId = numPr.append_child("w:numId");
-    const char* id_val = (type == ListType::Bullet) ? "1" : "2";
-    numId.attribute("w:val").set_value(id_val);
-    if (!numId.attribute("w:val")) numId.append_attribute("w:val") = id_val;
+    numId.remove_attribute("w:val");
+    numId.append_attribute("w:val") = std::to_string(numIdVal).c_str();
     
-    auto root = n.root().child("w:document");
-    if (!root.child("openword_numbering")) {
-        root.append_child("openword_numbering");
-    }
     return *this;
 }
 

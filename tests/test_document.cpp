@@ -42,9 +42,17 @@ TEST_CASE("Lists and Numbering Validation", "[lists]") {
     openword::Document doc;
     
     SECTION("Create and validate bullet and numbered lists") {
-        doc.addParagraph("Bullet Item 1").setList(openword::ListType::Bullet, 0);
-        doc.addParagraph("Numbered Item 1").setList(openword::ListType::Numbered, 0);
-        doc.addParagraph("Sub-bullet").setList(openword::ListType::Bullet, 1);
+        auto abs1 = doc.numbering().addAbstractNumbering(1);
+        openword::ListLevel lvl0; lvl0.levelIndex = 0; lvl0.format = openword::NumberingFormat::Bullet; lvl0.text = "-";
+        openword::ListLevel lvl1; lvl1.levelIndex = 1; lvl1.format = openword::NumberingFormat::Decimal; lvl1.text = "%2.";
+        abs1.addLevel(lvl0);
+        abs1.addLevel(lvl1);
+        
+        int listId = doc.numbering().addList(1);
+        
+        doc.addParagraph("Bullet Item 1").setList(listId, 0);
+        doc.addParagraph("Numbered Item 1").setList(listId, 1);
+        doc.addParagraph("Sub-bullet").setList(listId, 0);
 
         std::string filename = "test_lists_val.docx";
         REQUIRE(doc.save(filename.c_str()));
@@ -58,9 +66,9 @@ TEST_CASE("Lists and Numbering Validation", "[lists]") {
         auto root = num_doc.child("w:numbering");
         REQUIRE(root);
         
-        // Should have at least 2 abstractNum and 2 num nodes
-        REQUIRE(std::distance(root.children("w:abstractNum").begin(), root.children("w:abstractNum").end()) >= 2);
-        REQUIRE(std::distance(root.children("w:num").begin(), root.children("w:num").end()) >= 2);
+        // Should have at least 1 abstractNum and 1 num nodes
+        REQUIRE(std::distance(root.children("w:abstractNum").begin(), root.children("w:abstractNum").end()) >= 1);
+        REQUIRE(std::distance(root.children("w:num").begin(), root.children("w:num").end()) >= 1);
 
         // Verify w:lvl nesting (CRITICAL for Word compatibility)
         auto absNum0 = root.child("w:abstractNum");
@@ -81,7 +89,7 @@ TEST_CASE("Lists and Numbering Validation", "[lists]") {
         auto p2 = p1.next_sibling("w:p");
         auto numPr2 = p2.child("w:pPr").child("w:numPr");
         REQUIRE(numPr2);
-        REQUIRE(numPr2.child("w:numId").attribute("w:val").as_int() == 2); // Numbered
+        REQUIRE(numPr2.child("w:numId").attribute("w:val").as_int() == 1); // ListId 1
 
         // 3. Verify Relationships
         std::string rels_xml = extract_file_from_zip(filename, "word/_rels/document.xml.rels");

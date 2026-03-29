@@ -229,7 +229,7 @@ public:
     Paragraph& setAlignment(gsl::czstring align); // "left", "center", "right", "both"
     Paragraph& setSpacing(int beforeTwips, int afterTwips, int lineSpacing = -1, gsl::czstring lineRule = "auto");
     Paragraph& setIndentation(int leftTwips, int rightTwips, int firstLineTwips = 0, int hangingTwips = 0);
-    Paragraph& setList(ListType type, int level = 0);
+    Paragraph& setList(int numId, int level = 0);
     
     Run addHyperlink(gsl::czstring text, gsl::czstring url);
     Run addInternalLink(gsl::czstring text, gsl::czstring bookmarkName);
@@ -308,6 +308,43 @@ private:
 /**
  * @brief Represents a Microsoft Word Document (.docx)
  */
+
+enum class NumberingFormat {
+    Decimal,
+    LowerLetter,
+    UpperLetter,
+    LowerRoman,
+    UpperRoman,
+    Bullet
+};
+
+struct ListLevel {
+    int levelIndex = 0; // 0 to 8
+    NumberingFormat format = NumberingFormat::Decimal;
+    std::string text; // e.g. "%1.", "%1.%2.", or bullet char
+    std::string jc = "left"; // Justification: left, center, right
+    int indentTwips = 720;
+    int hangingTwips = 360;
+    std::string fontAscii = ""; // Specific font for bullets, e.g. "Symbol"
+};
+
+class AbstractNumbering {
+public:
+    explicit AbstractNumbering(void* node);
+    AbstractNumbering& addLevel(const ListLevel& level);
+private:
+    void* node_;
+};
+
+class NumberingCollection {
+public:
+    explicit NumberingCollection(void* node);
+    AbstractNumbering addAbstractNumbering(int abstractNumId);
+    int addList(int abstractNumId, int restartNumId = -1);
+private:
+    void* node_;
+};
+
 class Document {
 public:
     Document();
@@ -341,6 +378,7 @@ public:
     int createEndnote(const std::string& text);
     
     StyleCollection styles();
+    NumberingCollection numbering();
     
     /**
 

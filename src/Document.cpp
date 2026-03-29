@@ -302,33 +302,13 @@ bool Document::save(gsl::czstring filepath) {
             pimpl->doc.child("w:document").remove_child(parts);
         }
 
-        if (pimpl->doc.child("w:document").child("openword_numbering")) {
-            std::string num_xml = 
-                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
-                "<w:numbering xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">\n"
-                "  <w:abstractNum w:abstractNumId=\"0\">\n"
-                "    <w:nsid w:val=\"FFFFFF01\"/><w:multiLevelType w:val=\"singleLevel\"/>\n"
-                "    <w:lvl w:ilvl=\"0\">\n"
-                "      <w:start w:val=\"1\"/><w:numFmt w:val=\"bullet\"/><w:lvlText w:val=\"&#xF0B7;\"/><w:lvlJc w:val=\"left\"/>\n"
-                "      <w:pPr><w:ind w:left=\"720\" w:hanging=\"360\"/></w:pPr>\n"
-                "      <w:rPr><w:rFonts w:ascii=\"Symbol\" w:hAnsi=\"Symbol\" w:hint=\"default\"/></w:rPr>\n"
-                "    </w:lvl>\n"
-                "  </w:abstractNum>\n"
-                "  <w:abstractNum w:abstractNumId=\"1\">\n"
-                "    <w:nsid w:val=\"FFFFFF02\"/><w:multiLevelType w:val=\"singleLevel\"/>\n"
-                "    <w:lvl w:ilvl=\"0\">\n"
-                "      <w:start w:val=\"1\"/><w:numFmt w:val=\"decimal\"/><w:lvlText w:val=\"%1.\"/><w:lvlJc w:val=\"left\"/>\n"
-                "      <w:pPr><w:ind w:left=\"720\" w:hanging=\"360\"/></w:pPr>\n"
-                "    </w:lvl>\n"
-                "  </w:abstractNum>\n"
-                "  <w:num w:numId=\"1\"><w:abstractNumId w:val=\"0\"/></w:num>\n"
-                "  <w:num w:numId=\"2\"><w:abstractNumId w:val=\"1\"/></w:num>\n"
-                "</w:numbering>";
-            zip_buffers.push_back(num_xml);
+        if (pimpl->has_numbering) {
+            std::stringstream ss;
+            pimpl->numbering_doc.save(ss, "", pugi::format_raw);
+            zip_buffers.push_back(ss.str());
             zip_file_add(z, "word/numbering.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering", "numbering.xml");
             ct += "  <Override PartName=\"/word/numbering.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml\"/>\n";
-            pimpl->doc.child("w:document").remove_child("openword_numbering");
         }
 
         int current_rel_id = pimpl->doc.child("w:document").attribute("openword_next_rel_id").as_int(100);
@@ -431,6 +411,19 @@ int Document::createEndnote(const std::string& text) {
 
 StyleCollection Document::styles() {
     return StyleCollection(pimpl->styles_root.internal_object());
+}
+
+NumberingCollection Document::numbering() {
+    pimpl->has_numbering = true;
+    if (!pimpl->numbering_doc.child("w:numbering")) {
+        auto decl = pimpl->numbering_doc.append_child(pugi::node_declaration);
+        decl.append_attribute("version") = "1.0";
+        decl.append_attribute("encoding") = "UTF-8";
+        decl.append_attribute("standalone") = "yes";
+        auto root = pimpl->numbering_doc.append_child("w:numbering");
+        root.append_attribute("xmlns:w") = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+    }
+    return NumberingCollection(pimpl->numbering_doc.child("w:numbering").internal_object());
 }
 
 void Document::addTableOfContents(gsl::czstring title, int max_levels) {

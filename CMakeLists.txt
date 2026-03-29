@@ -81,6 +81,7 @@ add_library(openword
     src/Table.cpp
     src/Section.cpp
     src/Styles.cpp
+    src/Numbering.cpp
     src/MathConverter.cpp
 )
 

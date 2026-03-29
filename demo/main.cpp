@@ -90,10 +90,51 @@ void test_sections_and_headers() {
 
 void test_lists() {
     openword::Document doc;
-    doc.addParagraph("List test:");
-    doc.addParagraph("Item 1").setList(openword::ListType::Bullet, 0);
+    doc.addParagraph("Advanced Multi-Level Lists:");
+    
+    // 1. Create an abstract numbering schema
+    auto abstractNum = doc.numbering().addAbstractNumbering(1);
+    
+    openword::ListLevel lvl0;
+    lvl0.levelIndex = 0;
+    lvl0.format = openword::NumberingFormat::UpperRoman;
+    lvl0.text = "%1.";
+    abstractNum.addLevel(lvl0);
+    
+    openword::ListLevel lvl1;
+    lvl1.levelIndex = 1;
+    lvl1.format = openword::NumberingFormat::Decimal;
+    lvl1.text = "%1.%2.";
+    lvl1.indentTwips = 1440;
+    abstractNum.addLevel(lvl1);
+    
+    openword::ListLevel lvl2;
+    lvl2.levelIndex = 2;
+    lvl2.format = openword::NumberingFormat::LowerLetter;
+    lvl2.text = "(%3)";
+    lvl2.indentTwips = 2160;
+    abstractNum.addLevel(lvl2);
+
+    // 2. Instantiate a concrete list from it
+    int listId1 = doc.numbering().addList(1);
+    
+    // 3. Apply it
+    doc.addParagraph("First Chapter").setList(listId1, 0);
+    doc.addParagraph("Section one").setList(listId1, 1);
+    doc.addParagraph("Point a").setList(listId1, 2);
+    doc.addParagraph("Point b").setList(listId1, 2);
+    doc.addParagraph("Section two").setList(listId1, 1);
+    doc.addParagraph("Second Chapter").setList(listId1, 0);
+    
+    // 4. Restart numbering for a new block
+    doc.addParagraph();
+    doc.addParagraph("New Section (Restarted Numbering):");
+    int listId2 = doc.numbering().addList(1, listId1); // Restart from listId1
+    doc.addParagraph("Restarted First Chapter").setList(listId2, 0);
+    doc.addParagraph("Section one").setList(listId2, 1);
+
     doc.save("test_07_lists.docx");
-    fmt::print("- test_07_lists.docx (Lists)\n");
+    fmt::print("- test_07_lists.docx (Advanced Multi-Level Lists)\n");
 }
 
 void test_math() {
