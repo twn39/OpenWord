@@ -209,6 +209,30 @@ void test_replace() {
     fmt::print("- test_12_replace_text.docx (Text Replacement Engine)\n");
 }
 
+void test_floating_image() {
+    openword::Document doc;
+    
+    // 1. Standard Inline Image
+    doc.addParagraph("1. This is a standard inline image (behaves like a large text character):");
+    doc.addParagraph().addImage("tests/test.jpg", 0.3);
+    
+    doc.addParagraph();
+    
+    // 2. Floating Image (Behind Text)
+    auto p = doc.addParagraph();
+    
+    // X Offset: 1 inch = 914400 EMU. Let's put it 2 inches from column start.
+    // Y Offset: 0.5 inches = 457200 EMU from paragraph start.
+    p.addImage("tests/test.jpg", 0.35, openword::ImagePosition::BehindText, 3200400, 4114800);
+    
+    for (int i = 0; i < 5; ++i) {
+        p.addRun("2. This text is flowing over the floating image! Because the image is set to float BEHIND the text. This is extremely useful for watermarks or stamping corporate seals on contracts. ");
+    }
+    
+    doc.save("test_14_floating_image.docx");
+    fmt::print("- test_14_floating_image.docx (Floating Images)\n");
+}
+
 int main() {
     fmt::print("Generating capability test files...\n");
     test_basic_text();
@@ -223,7 +247,9 @@ int main() {
     test_links_and_references();
     test_columns_and_whitespace();
     test_replace();
+    test_floating_image();
     fmt::print("\nDone! Please verify test_05_tables.docx for the new advanced table layout.\n");
     return 0;
 }
+
 

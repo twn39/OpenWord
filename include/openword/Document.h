@@ -112,6 +112,13 @@ private:
     void* node_;
 };
 
+
+enum class ImagePosition {
+    Inline,       // In line with text
+    BehindText,   // Floating behind text
+    InFrontOfText // Floating in front of text
+};
+
 class Paragraph;
 class Header {
 public:
@@ -200,8 +207,11 @@ public:
      * @brief Adds an image to the paragraph.
      * @param image_path Path to the image file (JPEG or PNG).
      * @param scale Optional scaling factor (e.g., 0.5 for half size, 2.0 for double size). Default is 1.0.
+     * @param position Defines how the image is positioned relative to text.
+     * @param xOffset Optional horizontal offset in EMU (English Metric Units). Only applicable if not Inline.
+     * @param yOffset Optional vertical offset in EMU (English Metric Units). Only applicable if not Inline.
      */
-    void addImage(gsl::czstring image_path, double scale = 1.0);
+    void addImage(gsl::czstring image_path, double scale = 1.0, ImagePosition position = ImagePosition::Inline, long long xOffset = 0, long long yOffset = 0);
     
     /**
      * @brief Adds a raw OMML (Office Math Markup Language) equation to the paragraph.

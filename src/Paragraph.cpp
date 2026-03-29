@@ -235,7 +235,7 @@ std::string Paragraph::text() const {
     return result;
 }
 
-void Paragraph::addImage(gsl::czstring image_path, double scale) {
+void Paragraph::addImage(gsl::czstring image_path, double scale, ImagePosition position, long long xOffset, long long yOffset) {
     auto n = cast_node(node_);
     auto root = n.root().child("w:document");
     auto media_store = root.child("openword_media");
@@ -253,7 +253,37 @@ void Paragraph::addImage(gsl::czstring image_path, double scale) {
 
     auto r = n.append_child("w:r");
     auto drawing = r.append_child("w:drawing");
-    auto inline_node = drawing.append_child("wp:inline");
+    
+    pugi::xml_node wrapper_node;
+    if (position == ImagePosition::Inline) {
+        wrapper_node = drawing.append_child("wp:inline");
+    } else {
+        wrapper_node = drawing.append_child("wp:anchor");
+        wrapper_node.append_attribute("distT").set_value("0");
+        wrapper_node.append_attribute("distB").set_value("0");
+        wrapper_node.append_attribute("distL").set_value("114300");
+        wrapper_node.append_attribute("distR").set_value("114300");
+        wrapper_node.append_attribute("simplePos").set_value("0");
+        wrapper_node.append_attribute("relativeHeight").set_value("251658240");
+        
+        const char* behindDoc = (position == ImagePosition::BehindText) ? "1" : "0";
+        wrapper_node.append_attribute("behindDoc").set_value(behindDoc);
+        wrapper_node.append_attribute("locked").set_value("0");
+        wrapper_node.append_attribute("layoutInCell").set_value("1");
+        wrapper_node.append_attribute("allowOverlap").set_value("1");
+        
+        auto simplePos = wrapper_node.append_child("wp:simplePos");
+        simplePos.append_attribute("x").set_value("0");
+        simplePos.append_attribute("y").set_value("0");
+        
+        auto positionH = wrapper_node.append_child("wp:positionH");
+        positionH.append_attribute("relativeFrom").set_value("page");
+        positionH.append_child("wp:posOffset").text().set(std::to_string(xOffset).c_str());
+        
+        auto positionV = wrapper_node.append_child("wp:positionV");
+        positionV.append_attribute("relativeFrom").set_value("page");
+        positionV.append_child("wp:posOffset").text().set(std::to_string(yOffset).c_str());
+    }
     
     // Parse image dimensions dynamically
     auto [px_w, px_h] = getImageSize(image_path);
@@ -270,67 +300,64 @@ void Paragraph::addImage(gsl::czstring image_path, double scale) {
         emu_h = static_cast<long long>(emu_h * scale);
     }
 
-    auto extent = inline_node.append_child("wp:extent");
+    auto extent = wrapper_node.append_child("wp:extent");
     extent.append_attribute("cx").set_value(std::to_string(emu_w).c_str());
     extent.append_attribute("cy").set_value(std::to_string(emu_h).c_str());
-
-    auto docPr = inline_node.append_child("wp:docPr");
-    docPr.append_attribute("id").set_value("1");
-    docPr.append_attribute("name").set_value("Picture 1");
     
-    auto cNvGraphicFramePr = inline_node.append_child("wp:cNvGraphicFramePr");
-    auto graphicFrameLocks = cNvGraphicFramePr.append_child("a:graphicFrameLocks");
-    graphicFrameLocks.append_attribute("xmlns:a").set_value("http://schemas.openxmlformats.org/drawingml/2006/main");
-    graphicFrameLocks.append_attribute("noChangeAspect").set_value("1");
-
-    auto graphic = inline_node.append_child("a:graphic");
-    graphic.append_attribute("xmlns:a").set_value("http://schemas.openxmlformats.org/drawingml/2006/main");
+    auto effect = wrapper_node.append_child("wp:effectExtent");
+    effect.append_attribute("l").set_value("0");
+    effect.append_attribute("t").set_value("0");
+    effect.append_attribute("r").set_value("0");
+    effect.append_attribute("b").set_value("0");
+        
+    if (position != ImagePosition::Inline) {
+        wrapper_node.append_child("wp:wrapNone");
+    }
     
+    auto docPr = wrapper_node.append_child("wp:docPr");
+    docPr.append_attribute("id").set_value(std::to_string(c + 1).c_str());
+    docPr.append_attribute("name").set_value(("Picture " + std::to_string(c + 1)).c_str());
+    
+    if (position != ImagePosition::Inline) {
+        auto cNvGraphicFramePr = wrapper_node.append_child("wp:cNvGraphicFramePr");
+        auto graphicFrameLocks = cNvGraphicFramePr.append_child("a:graphicFrameLocks");
+        graphicFrameLocks.append_attribute("xmlns:a").set_value("http://schemas.openxmlformats.org/drawingml/2006/main");
+        graphicFrameLocks.append_attribute("noChangeAspect").set_value("1");
+    }
+    
+    auto graphic = wrapper_node.append_child("a:graphic");
     auto graphicData = graphic.append_child("a:graphicData");
     graphicData.append_attribute("uri").set_value("http://schemas.openxmlformats.org/drawingml/2006/picture");
     
     auto pic = graphicData.append_child("pic:pic");
-    pic.append_attribute("xmlns:pic").set_value("http://schemas.openxmlformats.org/drawingml/2006/picture");
     auto nvPicPr = pic.append_child("pic:nvPicPr");
     auto cNvPr = nvPicPr.append_child("pic:cNvPr");
-    cNvPr.append_attribute("id").set_value("0");
-    cNvPr.append_attribute("name").set_value("Image");
-    nvPicPr.append_child("pic:cNvPicPr");
-
+    cNvPr.append_attribute("id").set_value("1"); // Use ID=1 to avoid 0 which sometimes causes issues
+    cNvPr.append_attribute("name").set_value("Picture 1"); // generic name
+    auto cNvPicPr = nvPicPr.append_child("pic:cNvPicPr");
+    auto picLocks = cNvPicPr.append_child("a:picLocks");
+    picLocks.append_attribute("noChangeAspect").set_value("1");
+    picLocks.append_attribute("noChangeArrowheads").set_value("1");
+    
     auto blipFill = pic.append_child("pic:blipFill");
     auto blip = blipFill.append_child("a:blip");
     blip.append_attribute("r:embed").set_value(rid.c_str());
-    blipFill.append_child("a:stretch").append_child("a:fillRect");
-
+    blip.append_attribute("cstate").set_value("print");
+    auto stretch = blipFill.append_child("a:stretch");
+    stretch.append_child("a:fillRect");
+    
     auto spPr = pic.append_child("pic:spPr");
     auto xfrm = spPr.append_child("a:xfrm");
     auto off = xfrm.append_child("a:off");
     off.append_attribute("x").set_value("0");
     off.append_attribute("y").set_value("0");
-    auto ext2 = xfrm.append_child("a:ext");
-    ext2.append_attribute("cx").set_value(std::to_string(emu_w).c_str());
-    ext2.append_attribute("cy").set_value(std::to_string(emu_h).c_str());
-    spPr.append_child("a:prstGeom").append_attribute("prst").set_value("rect");
-    }
-
-    void Paragraph::addEquation(const std::string& omml) {
-    if (omml.empty()) return;
-
-    auto n = cast_node(node_);
-
-    // Parse the OMML string
-    pugi::xml_document temp_doc;
-    if (!temp_doc.load_string(omml.c_str())) return;
-
-    // Find the m:oMath node. 
-    pugi::xml_node math_node = temp_doc.child("m:oMath");
-    if (!math_node) {
-        math_node = temp_doc.select_node("//m:oMath").node();
-    }
-
-    if (math_node) {
-        n.append_copy(math_node);
-    }
+    auto ext = xfrm.append_child("a:ext");
+    ext.append_attribute("cx").set_value(std::to_string(emu_w).c_str());
+    ext.append_attribute("cy").set_value(std::to_string(emu_h).c_str());
+    
+    auto prstGeom = spPr.append_child("a:prstGeom");
+    prstGeom.append_attribute("prst").set_value("rect");
+    prstGeom.append_child("a:avLst");
 }
 
 Run Paragraph::addHyperlink(gsl::czstring text, gsl::czstring url) {
@@ -489,6 +516,21 @@ int Paragraph::replaceText(const std::string& search, const std::string& replace
     }
     
     return replace_count;
+}
+
+void Paragraph::addEquation(const std::string& omml) {
+    if (omml.empty()) return;
+    auto n = cast_node(node_);
+    
+    pugi::xml_document math_doc;
+    if (!math_doc.load_string(omml.c_str())) return;
+    
+    auto math_node = math_doc.child("m:oMath");
+    if (!math_node) math_node = math_doc.child("m:oMathPara");
+    
+    if (math_node) {
+        n.append_copy(math_node);
+    }
 }
 
 } // namespace openword

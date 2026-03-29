@@ -588,6 +588,27 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::filesystem::remove(filename);
     }
 
+    
+    SECTION("Floating Image with Text Wrapping") {
+        auto p = doc.addParagraph();
+        p.addImage("tests/test.jpg", 1.0, openword::ImagePosition::BehindText, 1000000, 2000000);
+        
+        std::string filename = "test_adv_floating.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+        
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        
+        // Assertions for specific floating anchor tags
+        REQUIRE(doc_xml.find("wp:anchor") != std::string::npos);
+        REQUIRE(doc_xml.find("behindDoc=\"1\"") != std::string::npos);
+        REQUIRE(doc_xml.find("relativeFrom=\"page\"") != std::string::npos);
+        REQUIRE(doc_xml.find("wp:posOffset>1000000<") != std::string::npos);
+        REQUIRE(doc_xml.find("wp:posOffset>2000000<") != std::string::npos);
+        REQUIRE(doc_xml.find("noChangeAspect=\"1\"") != std::string::npos); // Verify graphic frame locks
+
+        std::filesystem::remove(filename);
+    }
+
     SECTION("Section Columns") {
         auto p = doc.addParagraph("Col 1...");
         auto s = p.appendSectionBreak();
