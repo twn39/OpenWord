@@ -29,7 +29,7 @@ Section& Section::setPageSize(uint32_t w_twips, uint32_t h_twips, Orientation or
     auto pgSz = n.child("w:pgSz");
     if (!pgSz) pgSz = n.append_child("w:pgSz");
     
-    auto set_attr = [&](const char* name, uint32_t val) {
+    auto set_attr = [&](const char* name, int val) {
         if (!pgSz.attribute(name)) pgSz.append_attribute(name) = std::to_string(val).c_str();
         else pgSz.attribute(name).set_value(std::to_string(val).c_str());
     };
@@ -51,7 +51,7 @@ Section& Section::setMargins(const Margins& margins) {
     auto pgMar = n.child("w:pgMar");
     if (!pgMar) pgMar = n.append_child("w:pgMar");
     
-    auto set_attr = [&](const char* name, uint32_t val) {
+    auto set_attr = [&](const char* name, int val) {
         if (!pgMar.attribute(name)) pgMar.append_attribute(name) = std::to_string(val).c_str();
         else pgMar.attribute(name).set_value(std::to_string(val).c_str());
     };
@@ -98,8 +98,17 @@ static pugi::xml_node createPart(pugi::xml_node sectPr, const std::string& partT
     auto ref = sectPr.prepend_child(refName);
     
     std::string type_str = "default";
-    if (type == HeaderFooterType::First) type_str = "first";
-    else if (type == HeaderFooterType::Even) type_str = "even";
+    if (type == HeaderFooterType::First) {
+        type_str = "first";
+        if (!sectPr.child("w:titlePg")) {
+            sectPr.append_child("w:titlePg");
+        }
+    }
+    else if (type == HeaderFooterType::Even) {
+        type_str = "even";
+        // To truly enable even/odd headers, <w:evenAndOddHeaders/> must be added to word/settings.xml
+        // We will just set the attribute here, document settings handles global switch.
+    }
     
     ref.append_attribute("w:type") = type_str.c_str();
     ref.append_attribute("r:id") = rid_str.c_str();

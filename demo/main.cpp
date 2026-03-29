@@ -338,6 +338,49 @@ void test_mutability() {
     fmt::print("- test_15_mutability.docx (AST Mutability & Looping)\n");
 }
 
+void test_advanced_layout() {
+    openword::Document doc;
+    
+    // 1. Enable Even & Odd Headers
+    doc.setEvenAndOddHeaders(true);
+    
+    // 2. Setup the section margins and headers
+    auto sec = doc.finalSection();
+    
+    openword::Margins m;
+    m.top = 2880;     // 2 inches
+    m.bottom = 2880;  // 2 inches
+    m.left = 4320;    // 3 inches (huge left margin)
+    m.right = 1440;   // 1 inch
+    sec.setMargins(m);
+    
+    // 3. Set Headers
+    auto hFirst = sec.addHeader(openword::HeaderFooterType::First);
+    hFirst.addParagraph().addRun("--- FIRST PAGE HEADER (Cover) ---").setBold(true);
+    
+    auto hEven = sec.addHeader(openword::HeaderFooterType::Even);
+    hEven.addParagraph("--- EVEN PAGE HEADER ---").setAlignment("left");
+    
+    auto hOdd = sec.addHeader(openword::HeaderFooterType::Default);
+    hOdd.addParagraph("--- ODD PAGE HEADER ---").setAlignment("right");
+
+    // Page 1 (First)
+    doc.addParagraph("This is the COVER PAGE. Notice the huge 3-inch left margin and 2-inch top margin. The header should say 'FIRST PAGE HEADER'.").setStyle("Heading1");
+    // Word doesn't have an explicit 'addPageBreak' yet in our API, but a section break triggers a new page layout.
+    // Or we can just insert a ton of text to spill over.
+    for (int i=0; i<30; i++) doc.addParagraph("Filler text to push to next page...");
+
+    // Page 2 (Even)
+    doc.addParagraph("This is PAGE 2. The header should be on the LEFT and say 'EVEN PAGE HEADER'.").setStyle("Heading1");
+    for (int i=0; i<30; i++) doc.addParagraph("Filler text to push to next page...");
+
+    // Page 3 (Odd)
+    doc.addParagraph("This is PAGE 3. The header should be on the RIGHT and say 'ODD PAGE HEADER'.").setStyle("Heading1");
+
+    doc.save("test_16_advanced_layout.docx");
+    fmt::print("- test_16_advanced_layout.docx (Margins, First/Even/Odd Headers)\n");
+}
+
 int main() {
     fmt::print("Generating capability test files...\n");
     test_basic_text();
@@ -354,6 +397,7 @@ int main() {
     test_replace();
     test_floating_image();
     test_mutability();
+    test_advanced_layout();
     fmt::print("\nDone! Please verify test_05_tables.docx for the new advanced table layout.\n");
     return 0;
 }

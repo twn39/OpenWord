@@ -617,6 +617,46 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::filesystem::remove(filename);
     }
 
+    
+    SECTION("Advanced Page Margins and Headers") {
+        auto sec = doc.finalSection();
+        
+        // 1. Set Margins
+        openword::Margins m;
+        m.top = 1000;
+        m.bottom = 2000;
+        m.left = 3000;
+        m.right = 4000;
+        m.header = 500;
+        m.footer = 600;
+        m.gutter = 700;
+        sec.setMargins(m);
+        
+        // 2. Set Even and Odd headers
+        doc.setEvenAndOddHeaders(true);
+        
+        auto hFirst = sec.addHeader(openword::HeaderFooterType::First);
+        hFirst.addParagraph("First Page Header");
+        
+        auto hEven = sec.addHeader(openword::HeaderFooterType::Even);
+        hEven.addParagraph("Even Page Header");
+
+        std::string filename = "test_adv_margins.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+        
+        // Assertions
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        REQUIRE(doc_xml.find("w:pgMar w:top=\"1000\" w:right=\"4000\" w:bottom=\"2000\" w:left=\"3000\" w:header=\"500\" w:footer=\"600\" w:gutter=\"700\"") != std::string::npos);
+        REQUIRE(doc_xml.find("w:titlePg") != std::string::npos); // Because HeaderFooterType::First was used
+        REQUIRE(doc_xml.find("w:headerReference w:type=\"first\"") != std::string::npos);
+        REQUIRE(doc_xml.find("w:headerReference w:type=\"even\"") != std::string::npos);
+        
+        std::string settings_xml = extract_file_from_zip(filename, "word/settings.xml");
+        REQUIRE(settings_xml.find("w:evenAndOddHeaders") != std::string::npos);
+
+        std::filesystem::remove(filename);
+    }
+
     SECTION("Section Columns") {
         auto p = doc.addParagraph("Col 1...");
         auto s = p.appendSectionBreak();

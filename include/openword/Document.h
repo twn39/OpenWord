@@ -32,13 +32,13 @@ enum class Orientation {
 };
 
 struct Margins {
-    uint32_t top = 1440;
-    uint32_t right = 1440;
-    uint32_t bottom = 1440;
-    uint32_t left = 1440;
-    uint32_t header = 720;
-    uint32_t footer = 720;
-    uint32_t gutter = 0;
+    int top = 1440;
+    int right = 1440;
+    int bottom = 1440;
+    int left = 1440;
+    int header = 720;
+    int footer = 720;
+    int gutter = 0;
 };
 
 enum class ListType {
@@ -376,6 +376,8 @@ public:
     // --- IO Operations ---
     bool save(gsl::czstring filepath);
     bool load(gsl::czstring filepath);
+
+    void setEvenAndOddHeaders(bool val = true);
 
     // --- Content Creation ---
     Paragraph addParagraph(const std::string& text = "");

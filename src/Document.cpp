@@ -24,6 +24,8 @@ struct Document::Impl {
     bool has_styles = false;
         pugi::xml_document numbering_doc;
     bool has_numbering = false;
+    
+    bool even_and_odd_headers = false;
 
     Metadata metadata;
     bool has_metadata = false;
@@ -131,6 +133,10 @@ Document::Document(const std::string& templatePath) : pimpl(std::make_unique<Imp
     }
 }
 Document::~Document() = default;
+
+void Document::setEvenAndOddHeaders(bool val) {
+    pimpl->even_and_odd_headers = val;
+}
 
 Paragraph Document::addParagraph(const std::string& text) {
     auto sectPr = pimpl->body.child("w:sectPr");
@@ -319,12 +325,16 @@ bool Document::save(gsl::czstring filepath) {
         zip_file_add(z, "word/document.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
         pimpl->doc.child("w:document").append_attribute("openword_next_rel_id") = std::to_string(current_rel_id).c_str();
 
-        if (pimpl->needs_update_fields) {
-            std::string settings_xml = 
-                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
-                "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">\n"
-                "  <w:updateFields w:val=\"true\"/>\n"
-                "</w:settings>";
+        if (pimpl->needs_update_fields || pimpl->even_and_odd_headers) {
+            std::string settings_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
+                                       "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">\n";
+            if (pimpl->needs_update_fields) {
+                settings_xml += "  <w:updateFields w:val=\"true\"/>\n";
+            }
+            if (pimpl->even_and_odd_headers) {
+                settings_xml += "  <w:evenAndOddHeaders/>\n";
+            }
+            settings_xml += "</w:settings>";
             zip_buffers.push_back(settings_xml);
             zip_file_add(z, "word/settings.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings", "settings.xml");
