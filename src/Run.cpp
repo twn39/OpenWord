@@ -154,4 +154,62 @@ std::string Run::text() const {
     return t ? t.text().get() : "";
 }
 
+
+static const char* highlightColorToString(HighlightColor color) {
+    switch (color) {
+        case HighlightColor::Yellow: return "yellow";
+        case HighlightColor::Green: return "green";
+        case HighlightColor::Cyan: return "cyan";
+        case HighlightColor::Magenta: return "magenta";
+        case HighlightColor::Blue: return "blue";
+        case HighlightColor::Red: return "red";
+        case HighlightColor::DarkBlue: return "darkBlue";
+        case HighlightColor::DarkCyan: return "darkCyan";
+        case HighlightColor::DarkGreen: return "darkGreen";
+        case HighlightColor::DarkMagenta: return "darkMagenta";
+        case HighlightColor::DarkRed: return "darkRed";
+        case HighlightColor::DarkYellow: return "darkYellow";
+        case HighlightColor::DarkGray: return "darkGray";
+        case HighlightColor::LightGray: return "lightGray";
+        case HighlightColor::Black: return "black";
+        default: return "none";
+    }
+}
+
+Run& Run::setHighlight(HighlightColor color) {
+    auto n = cast_node(node_);
+    auto rPr = n.child("w:rPr");
+    if (!rPr) rPr = n.prepend_child("w:rPr");
+    
+    auto highlight = rPr.child("w:highlight");
+    if (!highlight) highlight = rPr.append_child("w:highlight");
+    
+    highlight.remove_attribute("w:val");
+    if (color != HighlightColor::Default) {
+        highlight.append_attribute("w:val") = highlightColorToString(color);
+    } else {
+        rPr.remove_child(highlight);
+    }
+    
+    return *this;
+}
+
+Run& Run::setCharacterSpacing(int twips) {
+    auto n = cast_node(node_);
+    auto rPr = n.child("w:rPr");
+    if (!rPr) rPr = n.prepend_child("w:rPr");
+    
+    auto spacing = rPr.child("w:spacing");
+    if (!spacing) spacing = rPr.append_child("w:spacing");
+    
+    spacing.remove_attribute("w:val");
+    if (twips != 0) {
+        spacing.append_attribute("w:val") = std::to_string(twips).c_str();
+    } else {
+        rPr.remove_child(spacing);
+    }
+    
+    return *this;
+}
+
 } // namespace openword

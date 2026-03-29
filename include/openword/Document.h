@@ -7,6 +7,11 @@
 
 namespace openword {
 
+
+enum class HighlightColor {
+    Yellow, Green, Cyan, Magenta, Blue, Red, DarkBlue, DarkCyan, DarkGreen, DarkMagenta, DarkRed, DarkYellow, DarkGray, LightGray, Black, Default
+};
+
 struct Color {
     uint8_t r{0};
     uint8_t g{0};
@@ -158,6 +163,8 @@ class Row {
 public:
     explicit Row(void* node);
     Row& setHeight(int twips, HeightRule rule = HeightRule::AtLeast);
+    Row& setRepeatHeaderRow(bool repeat = true);
+    Row& setCantSplit(bool cantSplit = true);
     
     // --- Data Extraction ---
     std::vector<Cell> cells() const;
@@ -192,6 +199,8 @@ public:
     Run& setStrike(bool val = true);
     Run& setDoubleStrike(bool val = true);
     Run& setVertAlign(VertAlign align);
+    Run& setHighlight(HighlightColor color);
+    Run& setCharacterSpacing(int twips);
     
     // --- Backgrounds ---
     Run& setHighlight(gsl::czstring color); // e.g. "yellow", "cyan"

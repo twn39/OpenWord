@@ -696,6 +696,113 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::filesystem::remove(filename);
     }
 
+    
+    SECTION("Image Resource Pooling and Hash Deduplication") {
+        auto p = doc.addParagraph();
+        p.addImage("tests/test.jpg", 1.0);
+        p.addImage("tests/test.jpg", 0.5); // Same image
+        p.addImage("tests/test.jpg", 2.0); // Same image
+        
+        std::string filename = "test_adv_pool.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+        
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        
+        // Count how many times the blip references an image
+        size_t blip_count = 0;
+        size_t pos = 0;
+        while ((pos = doc_xml.find("<a:blip", pos)) != std::string::npos) {
+            blip_count++;
+            pos += 7;
+        }
+        REQUIRE(blip_count == 3);
+        
+        // But the relationship ID should be identical if pooling works
+        size_t rel_id_count = 0;
+        pos = 0;
+        while ((pos = doc_xml.find("r:embed=\"rIdMedia1\"", pos)) != std::string::npos) {
+            rel_id_count++;
+            pos += 18;
+        }
+        // At least the 3 we just inserted should share the same ID. 
+        // Note: other tests might have inserted images too if the `doc` is shared, but we can assume at least 3.
+        REQUIRE(rel_id_count >= 3);
+        
+        // Assert physical file count in ZIP
+        int err = 0;
+        zip_t* z = zip_open(filename.c_str(), 0, &err);
+        REQUIRE(z != nullptr);
+        
+        int num_files = zip_get_num_entries(z, 0);
+        int media_files = 0;
+        for (int i = 0; i < num_files; ++i) {
+            std::string name = zip_get_name(z, i, 0);
+            if (name.find("word/media/") == 0) {
+                media_files++;
+            }
+        }
+        zip_close(z);
+        
+        // Only 1 unique physical file should exist in the media folder for this image
+        REQUIRE(media_files == 1);
+
+        std::filesystem::remove(filename);
+    }
+
+    
+    SECTION("Run Highlighting and Character Spacing") {
+        auto p = doc.addParagraph();
+        p.addRun("Normal text. ");
+        p.addRun("Highlighted text.").setHighlight(openword::HighlightColor::Yellow);
+        p.addRun("Spaced out text.").setCharacterSpacing(40); // 2 points
+        
+        std::string filename = "test_adv_run_format.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+        
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        REQUIRE(doc_xml.find("w:highlight w:val=\"yellow\"") != std::string::npos);
+        REQUIRE(doc_xml.find("w:spacing w:val=\"40\"") != std::string::npos);
+        
+        std::filesystem::remove(filename);
+    }
+    
+    SECTION("Table Row Advanced Layout Rules and Extraction") {
+        auto t = doc.addTable(2, 2);
+        
+        // Header row repeats on next page
+        t.row(0).setRepeatHeaderRow(true);
+        t.cell(0, 0).addParagraph("Header Col 1");
+        t.cell(0, 1).addParagraph("Header Col 2");
+        
+        // Data row cannot split across pages
+        t.row(1).setCantSplit(true);
+        t.cell(1, 0).addParagraph("Data Col 1");
+        t.cell(1, 1).addParagraph("Data Col 2");
+        
+        std::string filename = "test_adv_table_layout.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+        
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        
+        // 1. AST Structural Verification
+        pugi::xml_document xml_doc;
+        REQUIRE(xml_doc.load_string(doc_xml.c_str()));
+        auto body = xml_doc.child("w:document").child("w:body");
+        auto tableNode = body.child("w:tbl");
+        
+        auto tr0 = tableNode.child("w:tr");
+        REQUIRE(tr0.child("w:trPr").child("w:tblHeader").attribute("w:val").value() == std::string("true"));
+        
+        auto tr1 = tr0.next_sibling("w:tr");
+        REQUIRE(tr1.child("w:trPr").child("w:cantSplit").attribute("w:val").value() == std::string("true"));
+        
+        // 2. Data Content Verification using extraction API
+        REQUIRE(t.row(0).text() == "Header Col 1 Header Col 2");
+        REQUIRE(t.row(1).text() == "Data Col 1 Data Col 2");
+        
+        std::filesystem::remove(filename);
+    }
+
     SECTION("Section Columns") {
         auto p = doc.addParagraph("Col 1...");
         auto s = p.appendSectionBreak();

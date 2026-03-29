@@ -32,6 +32,41 @@ Row::Row(void* node) : node_(node) {
     Expects(node_ != nullptr);
 }
 
+
+Row& Row::setRepeatHeaderRow(bool repeat) {
+    auto n = cast_node(node_);
+    auto trPr = n.child("w:trPr");
+    if (!trPr) trPr = n.prepend_child("w:trPr");
+    
+    auto tblHeader = trPr.child("w:tblHeader");
+    if (repeat) {
+        if (!tblHeader) tblHeader = trPr.append_child("w:tblHeader");
+        tblHeader.remove_attribute("w:val");
+        tblHeader.append_attribute("w:val") = "true";
+    } else {
+        if (tblHeader) trPr.remove_child(tblHeader);
+    }
+    
+    return *this;
+}
+
+Row& Row::setCantSplit(bool cantSplit) {
+    auto n = cast_node(node_);
+    auto trPr = n.child("w:trPr");
+    if (!trPr) trPr = n.prepend_child("w:trPr");
+    
+    auto cantSplitNode = trPr.child("w:cantSplit");
+    if (cantSplit) {
+        if (!cantSplitNode) cantSplitNode = trPr.append_child("w:cantSplit");
+        cantSplitNode.remove_attribute("w:val");
+        cantSplitNode.append_attribute("w:val") = "true";
+    } else {
+        if (cantSplitNode) trPr.remove_child(cantSplitNode);
+    }
+    
+    return *this;
+}
+
 Row& Row::setHeight(int twips, HeightRule rule) {
     auto n = cast_node(node_);
     auto trPr = n.child("w:trPr");

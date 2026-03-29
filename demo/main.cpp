@@ -428,6 +428,42 @@ void test_p1_features() {
     fmt::print("- test_18_p1_features.docx (Textboxes & Paragraph Shading)\n");
 }
 
+void test_p2_features() {
+    openword::Document doc;
+    
+    // 1. Text Highlighting & Spacing
+    auto p = doc.addParagraph();
+    p.addRun("This is normal text. ");
+    p.addRun("This is highlighted yellow! ").setHighlight(openword::HighlightColor::Yellow);
+    p.addRun("This is green! ").setHighlight(openword::HighlightColor::Green);
+    p.addRun("And this text has very wide spacing.").setCharacterSpacing(100);
+    
+    doc.addParagraph();
+    
+    // 2. Advanced Table Layout (Repeat Header & Prevent Split)
+    doc.addParagraph("Long Table Demo (Header repeats on next page):");
+    auto t = doc.addTable(40, 2); // 40 rows to force a page break
+    t.setBorders(openword::BorderSettings{openword::BorderStyle::Single, 4, "000000"},
+                 openword::BorderSettings{openword::BorderStyle::Dotted, 2, "AAAAAA"});
+    
+    // Header Row
+    auto headerRow = t.row(0);
+    headerRow.setRepeatHeaderRow(true); // <--- Key feature here!
+    headerRow.cells()[0].setShading("DDDDDD").addParagraph().addRun("Item No.").setBold(true);
+    headerRow.cells()[1].setShading("DDDDDD").addParagraph().addRun("Description").setBold(true);
+    
+    // Data Rows
+    for (int j = 1; j < 40; ++j) {
+        auto dataRow = t.row(j);
+        dataRow.setCantSplit(true); // <--- Prevent row from breaking across pages
+        dataRow.cells()[0].addParagraph(std::to_string(j));
+        dataRow.cells()[1].addParagraph("This is a description for item " + std::to_string(j) + ". It contains enough text to potentially cause a split if the table happens to break exactly at this row.");
+    }
+    
+    doc.save("test_19_p2_features.docx");
+    fmt::print("- test_19_p2_features.docx (Highlights & Advanced Table Rules)\n");
+}
+
 int main() {
     fmt::print("Generating capability test files...\n");
     test_basic_text();
@@ -447,6 +483,7 @@ int main() {
     test_advanced_layout();
     test_resource_pool();
     test_p1_features();
+    test_p2_features();
 
     fmt::print("\nDone! Please verify test_05_tables.docx for the new advanced table layout.\n");
     return 0;
