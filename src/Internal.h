@@ -36,10 +36,15 @@ public:
             rel.append_attribute("Target") = data.target.c_str();
         }
     }
+    void setNextId(int id) { nextId_ = id; }
 private:
     struct RelData { std::string type; std::string target; };
     int nextId_ = 1;
     std::map<std::string, RelData> relationships_;
 };
+
+// Math conversion helper
+std::string convert_latex_to_omml(const std::string& latex);
+std::string convert_mathml_to_omml(const std::string& mathml);
 
 } // namespace openword

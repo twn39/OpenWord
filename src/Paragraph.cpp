@@ -124,6 +124,85 @@ Paragraph& Paragraph::setIndentation(int leftTwips, int rightTwips, int firstLin
     return *this;
 }
 
+Paragraph& Paragraph::setList(ListType type, int level) {
+    auto n = cast_node(node_);
+    auto pPr = n.child("w:pPr");
+    if (!pPr) pPr = n.prepend_child("w:pPr");
+    auto numPr = pPr.child("w:numPr");
+    
+    if (type == ListType::None) {
+        if (numPr) pPr.remove_child(numPr);
+        return *this;
+    }
+    
+    if (!numPr) numPr = pPr.append_child("w:numPr");
+    
+    auto ilvl = numPr.child("w:ilvl");
+    if (!ilvl) ilvl = numPr.append_child("w:ilvl");
+    ilvl.attribute("w:val").set_value(std::to_string(level).c_str());
+    if (!ilvl.attribute("w:val")) ilvl.append_attribute("w:val") = std::to_string(level).c_str();
+    
+    auto numId = numPr.child("w:numId");
+    if (!numId) numId = numPr.append_child("w:numId");
+    const char* id_val = (type == ListType::Bullet) ? "1" : "2";
+    numId.attribute("w:val").set_value(id_val);
+    if (!numId.attribute("w:val")) numId.append_attribute("w:val") = id_val;
+    
+    auto root = n.root().child("w:document");
+    if (!root.child("openword_numbering")) {
+        root.append_child("openword_numbering");
+    }
+    return *this;
+}
+
+Section Paragraph::appendSectionBreak() {
+    auto n = cast_node(node_);
+    auto body = n.parent();
+    auto finalSectPr = body.child("w:sectPr");
+    
+    // Create pPr if not exists
+    auto pPr = n.child("w:pPr");
+    if (!pPr) pPr = n.prepend_child("w:pPr");
+    
+    // Create sectPr in current paragraph
+    auto pSectPr = pPr.child("w:sectPr");
+    if (!pSectPr) pSectPr = pPr.append_child("w:sectPr");
+    else pSectPr.remove_children(); // Ensure clean slate
+    
+    // If there's a global section at the end, move its content to this break
+    if (finalSectPr) {
+        // Copy all children of global section to this paragraph's section break
+        for (auto child : finalSectPr.children()) {
+            pSectPr.append_copy(child);
+        }
+        // Also copy attributes
+        for (auto attr : finalSectPr.attributes()) {
+            pSectPr.append_attribute(attr.name()) = attr.value();
+        }
+        
+        // Now reset the global section to defaults for the next section
+        finalSectPr.remove_children();
+        for (auto attr : finalSectPr.attributes()) {
+            finalSectPr.remove_attribute(attr);
+        }
+        
+        // Re-add basic default properties to the new global section
+        auto pgSz = finalSectPr.append_child("w:pgSz");
+        pgSz.append_attribute("w:w") = "11906";
+        pgSz.append_attribute("w:h") = "16838";
+        auto pgMar = finalSectPr.append_child("w:pgMar");
+        pgMar.append_attribute("w:top") = "1440";
+        pgMar.append_attribute("w:right") = "1440";
+        pgMar.append_attribute("w:bottom") = "1440";
+        pgMar.append_attribute("w:left") = "1440";
+        pgMar.append_attribute("w:header") = "720";
+        pgMar.append_attribute("w:footer") = "720";
+        pgMar.append_attribute("w:gutter") = "0";
+    }
+    
+    return Section(finalSectPr.internal_object());
+}
+
 std::vector<Run> Paragraph::runs() const {
     std::vector<Run> result;
     auto n = cast_node(node_);
@@ -217,6 +296,26 @@ void Paragraph::addImage(gsl::czstring image_path, double scale) {
     ext2.append_attribute("cx").set_value(std::to_string(emu_w).c_str());
     ext2.append_attribute("cy").set_value(std::to_string(emu_h).c_str());
     spPr.append_child("a:prstGeom").append_attribute("prst").set_value("rect");
-}
+    }
 
-} // namespace openword
+    void Paragraph::addEquation(const std::string& omml) {
+    if (omml.empty()) return;
+
+    auto n = cast_node(node_);
+
+    // Parse the OMML string
+    pugi::xml_document temp_doc;
+    if (!temp_doc.load_string(omml.c_str())) return;
+
+    // Find the m:oMath node. 
+    pugi::xml_node math_node = temp_doc.child("m:oMath");
+    if (!math_node) {
+        math_node = temp_doc.select_node("//m:oMath").node();
+    }
+
+    if (math_node) {
+        n.append_copy(math_node);
+    }
+    }
+
+    } // namespace openword

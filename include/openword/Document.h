@@ -26,6 +26,62 @@ enum class VertAlign {
     Subscript
 };
 
+enum class Orientation {
+    Portrait,
+    Landscape
+};
+
+struct Margins {
+    uint32_t top = 1440;
+    uint32_t right = 1440;
+    uint32_t bottom = 1440;
+    uint32_t left = 1440;
+    uint32_t header = 720;
+    uint32_t footer = 720;
+    uint32_t gutter = 0;
+};
+
+enum class ListType {
+    None,
+    Bullet,
+    Numbered
+};
+
+enum class HeaderFooterType {
+    Default,
+    First,
+    Even
+};
+
+class Paragraph;
+class Header {
+public:
+    explicit Header(void* node);
+    Paragraph addParagraph(const std::string& text = "");
+private:
+    void* node_;
+};
+
+class Footer {
+public:
+    explicit Footer(void* node);
+    Paragraph addParagraph(const std::string& text = "");
+private:
+    void* node_;
+};
+
+class Section {
+public:
+    explicit Section(void* node);
+    Section& setPageSize(uint32_t w_twips, uint32_t h_twips, Orientation orient = Orientation::Portrait);
+    Section& setMargins(const Margins& margins);
+    
+    Header addHeader(HeaderFooterType type = HeaderFooterType::Default);
+    Footer addFooter(HeaderFooterType type = HeaderFooterType::Default);
+private:
+    void* node_;
+};
+
 /**
  * @brief Represents a Run of text within a paragraph (w:r).
  * This is a lightweight proxy object passed by value.
@@ -79,10 +135,19 @@ public:
      */
     void addImage(gsl::czstring image_path, double scale = 1.0);
     
+    /**
+     * @brief Adds a raw OMML (Office Math Markup Language) equation to the paragraph.
+     * @param omml The raw OMML XML string.
+     */
+    void addEquation(const std::string& omml);
+
     Paragraph& setStyle(gsl::czstring styleId);
     Paragraph& setAlignment(gsl::czstring align); // "left", "center", "right", "both"
     Paragraph& setSpacing(int beforeTwips, int afterTwips, int lineSpacing = -1, gsl::czstring lineRule = "auto");
     Paragraph& setIndentation(int leftTwips, int rightTwips, int firstLineTwips = 0, int hangingTwips = 0);
+    Paragraph& setList(ListType type, int level = 0);
+    
+    Section appendSectionBreak();
 
     // --- DOM Traversal & Data Extractors ---
     std::vector<Run> runs() const;
@@ -142,6 +207,7 @@ public:
     Table addTable(int rows, int cols);
     
     // --- DOM Traversal ---
+    Section finalSection();
     std::vector<Paragraph> paragraphs() const;
     
     /**
@@ -153,6 +219,7 @@ public:
 
     // --- Utilities ---
     std::string convertMathMLToOMML(const std::string& mathml) const;
+    std::string convertLaTeXToOMML(const std::string& latex) const;
 
 private:
     struct Impl;

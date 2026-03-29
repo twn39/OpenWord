@@ -94,12 +94,20 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 
+# 7. Manual Rust Integration
+add_library(rust_math_engine STATIC IMPORTED)
+set_target_properties(rust_math_engine PROPERTIES
+    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/rust_math_engine/target/release/librust_math_engine.a"
+)
+
 # Define the OpenWord library
 add_library(openword
     src/Document.cpp
     src/Run.cpp
     src/Paragraph.cpp
     src/Table.cpp
+    src/Section.cpp
+    src/MathConverter.cpp
 )
 
 # Setup include directories
@@ -121,10 +129,11 @@ target_link_libraries(openword
         LibXslt
         zip
         fmt::fmt
+        rust_math_engine
 )
 
 # Add an executable for demonstration
-add_executable(openword_demo src/main.cpp)
+add_executable(openword_demo demo/main.cpp)
 target_link_libraries(openword_demo PRIVATE openword fmt::fmt)
 
 # Add test using Catch2 v3

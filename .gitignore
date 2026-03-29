@@ -12,3 +12,7 @@ wheels/
 uv.lock
 .python-version
 pyproject.toml
+.DS_Store
+/*.docx
+
+rust_math_engine/target/
