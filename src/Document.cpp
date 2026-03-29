@@ -33,6 +33,8 @@ struct Document::Impl {
     pugi::xml_document endnotes_doc;
     pugi::xml_node endnotes_root;
     int next_endnote_id = 1;
+    
+    bool needs_update_fields = false;
 
     void initialize() {
         auto decl = doc.append_child(pugi::node_declaration);
@@ -304,15 +306,17 @@ bool Document::save(gsl::czstring filepath) {
         zip_file_add(z, "word/document.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
         pimpl->doc.child("w:document").append_attribute("openword_next_rel_id") = std::to_string(current_rel_id).c_str();
 
-        std::string settings_xml = 
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
-            "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">\n"
-            "  <w:updateFields w:val=\"true\"/>\n"
-            "</w:settings>";
-        zip_buffers.push_back(settings_xml);
-        zip_file_add(z, "word/settings.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-        pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings", "settings.xml");
-        ct += "  <Override PartName=\"/word/settings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/>\n";
+        if (pimpl->needs_update_fields) {
+            std::string settings_xml = 
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
+                "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">\n"
+                "  <w:updateFields w:val=\"true\"/>\n"
+                "</w:settings>";
+            zip_buffers.push_back(settings_xml);
+            zip_file_add(z, "word/settings.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings", "settings.xml");
+            ct += "  <Override PartName=\"/word/settings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/>\n";
+        }
 
         if (!pimpl->doc_rels.empty()) {
             pugi::xml_document rels_doc;
@@ -393,6 +397,7 @@ int Document::createEndnote(const std::string& text) {
 }
 
 void Document::addTableOfContents(gsl::czstring title, int max_levels) {
+    pimpl->needs_update_fields = true;
     auto sectPr = pimpl->body.child("w:sectPr");
     
     if (title && title[0] != '\0') {
