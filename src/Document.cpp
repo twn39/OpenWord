@@ -513,6 +513,12 @@ std::vector<Paragraph> Document::paragraphs() const {
     return result;
 }
 
+std::vector<Table> Document::tables() const {
+    std::vector<Table> result;
+    for (auto node : pimpl->body.children("w:tbl")) result.push_back(Table(node.internal_object()));
+    return result;
+}
+
 int Document::replaceText(const std::string& search, const std::string& replace) {
     int count = 0;
     

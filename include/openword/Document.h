@@ -153,10 +153,15 @@ private:
  * @brief Represents a Run of text within a paragraph (w:r).
  * This is a lightweight proxy object passed by value.
  */
+class Cell;
 class Row {
 public:
     explicit Row(void* node);
     Row& setHeight(int twips, HeightRule rule = HeightRule::AtLeast);
+    
+    // --- Data Extraction ---
+    std::vector<Cell> cells() const;
+    std::string text() const;
 private:
     void* node_;
 };
@@ -246,6 +251,7 @@ private:
 /**
  * @brief Represents a cell in a Table in the Word document.
  */
+class Table;
 class Cell {
 public:
     explicit Cell(void* node);
@@ -258,7 +264,11 @@ public:
     Cell& setWidth(int twips, const std::string& type = "dxa");
     Cell& setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right);
     Cell& setBorders(const BorderSettings& all);
+    
+    // --- Data Extraction & Manipulation ---
     int replaceText(const std::string& search, const std::string& replace);
+    std::string text() const;
+    std::vector<Paragraph> paragraphs() const;
 
 private:
     void* node_;
@@ -271,9 +281,10 @@ class Table {
 public:
     explicit Table(void* node);
 
-    // --- Data Access ---
+    // --- Data Access & Traversal ---
     Cell cell(int row, int col);
     Row row(int rowIndex);
+    std::vector<Row> rows() const;
     void mergeCells(int startRow, int startCol, int endRow, int endCol);
     
     // --- Ergonomic Table Formatting ---
@@ -285,7 +296,10 @@ public:
     Table& setColumnWidths(const std::vector<int>& twipsList);
     
     Table& setAlignment(gsl::czstring align);
+    
+    // --- Data Extraction & Manipulation ---
     int replaceText(const std::string& search, const std::string& replace);
+    std::string text() const;
 
 private:
     void* node_;
@@ -311,17 +325,12 @@ public:
 
     // --- Content Creation ---
     Paragraph addParagraph(const std::string& text = "");
-
-    Cell& setVertAlign(VerticalAlignment align);
-    Cell& setShading(const std::string& hexColor);
-    Cell& setWidth(int twips, const std::string& type = "dxa");
-    Cell& setBorders(const BorderSettings& top, const BorderSettings& bottom, const BorderSettings& left, const BorderSettings& right);
-    Cell& setBorders(const BorderSettings& all);
     Table addTable(int rows, int cols);
     
-    // --- DOM Traversal ---
+    // --- DOM Traversal & Extraction ---
     Section finalSection();
     std::vector<Paragraph> paragraphs() const;
+    std::vector<Table> tables() const;
     
     void setMetadata(const Metadata& meta);
     Metadata metadata() const;

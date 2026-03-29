@@ -342,5 +342,65 @@ int Table::replaceText(const std::string& search, const std::string& replace) {
     return count;
 }
 
+// --- Row Extraction ---
+
+std::vector<Cell> Row::cells() const {
+    std::vector<Cell> result;
+    auto n = cast_node(node_);
+    for (auto tc : n.children("w:tc")) {
+        result.push_back(Cell(tc.internal_object()));
+    }
+    return result;
+}
+
+std::string Row::text() const {
+    std::string result;
+    for (auto& c : cells()) {
+        result += c.text() + " ";
+    }
+    if (!result.empty()) result.pop_back(); // Remove trailing space
+    return result;
+}
+
+// --- Cell Extraction ---
+
+std::vector<Paragraph> Cell::paragraphs() const {
+    std::vector<Paragraph> result;
+    auto n = cast_node(node_);
+    for (auto p : n.children("w:p")) {
+        result.push_back(Paragraph(p.internal_object()));
+    }
+    return result;
+}
+
+std::string Cell::text() const {
+    std::string result;
+    for (auto& p : paragraphs()) {
+        result += p.text() + "\n";
+    }
+    if (!result.empty()) result.pop_back(); // Remove trailing newline
+    return result;
+}
+
+// --- Table Extraction ---
+
+std::vector<Row> Table::rows() const {
+    std::vector<Row> result;
+    auto n = cast_node(node_);
+    for (auto tr : n.children("w:tr")) {
+        result.push_back(Row(tr.internal_object()));
+    }
+    return result;
+}
+
+std::string Table::text() const {
+    std::string result;
+    for (auto& r : rows()) {
+        result += r.text() + "\n";
+    }
+    if (!result.empty()) result.pop_back();
+    return result;
+}
+
 } // namespace openword
 
