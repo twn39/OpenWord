@@ -16,3 +16,7 @@ pyproject.toml
 /*.docx
 
 rust_math_engine/target/
+
+# Local reference and documentation
+third_party/
+GEMINI.md
