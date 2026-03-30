@@ -2,7 +2,7 @@
 
 namespace openword {
 
-constexpr const char* DEFAULT_STYLES_XML = R"XML(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+constexpr const char *DEFAULT_STYLES_XML = R"XML(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:docDefaults>
     <w:rPrDefault>

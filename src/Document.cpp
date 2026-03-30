@@ -1,16 +1,16 @@
-#include <list>
-#include <set>
-#include <openword/Document.h>
-#include "Internal.h"
 #include "DefaultStyles.h"
+#include "Internal.h"
+#include <list>
+#include <openword/Document.h>
+#include <set>
 
 // Standard library
 #include <sstream>
 
 // Third-party libraries
+#include <fmt/core.h>
 #include <pugixml.hpp>
 #include <zip.h>
-#include <fmt/core.h>
 
 namespace openword {
 
@@ -22,9 +22,9 @@ struct Document::Impl {
     pugi::xml_node styles_root;
     RelationshipManager doc_rels;
     bool has_styles = false;
-        pugi::xml_document numbering_doc;
+    pugi::xml_document numbering_doc;
     bool has_numbering = false;
-    
+
     bool even_and_odd_headers = false;
 
     Metadata metadata;
@@ -37,11 +37,11 @@ struct Document::Impl {
     pugi::xml_document endnotes_doc;
     pugi::xml_node endnotes_root;
     int next_endnote_id = 1;
-    
+
     pugi::xml_document comments_doc;
     pugi::xml_node comments_root;
     int next_comment_id = 0;
-    
+
     bool needs_update_fields = false;
 
     void initialize() {
@@ -70,7 +70,7 @@ struct Document::Impl {
         d.append_attribute("mc:Ignorable") = "w14 wp14";
         d.append_attribute("openword_next_rel_id") = "100";
         body = d.append_child("w:body");
-        
+
         auto sectPr = body.append_child("w:sectPr");
         auto pgSz = sectPr.append_child("w:pgSz");
         pgSz.append_attribute("w:w") = "11906";
@@ -101,7 +101,7 @@ struct Document::Impl {
         e_decl.append_attribute("standalone") = "yes";
         endnotes_root = endnotes_doc.append_child("w:endnotes");
         endnotes_root.append_attribute("xmlns:w") = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-        
+
         auto c_decl = comments_doc.append_child(pugi::node_declaration);
         c_decl.append_attribute("version") = "1.0";
         c_decl.append_attribute("encoding") = "UTF-8";
@@ -113,18 +113,20 @@ struct Document::Impl {
 
 Document::Document() : pimpl(std::make_unique<Impl>()) { pimpl->initialize(); }
 
-Document::Document(const std::string& templatePath) : pimpl(std::make_unique<Impl>()) {
+Document::Document(const std::string &templatePath) : pimpl(std::make_unique<Impl>()) {
     pimpl->initialize(); // Set up basic empty doc structure
-    
+
     int error = 0;
-    zip_t* z = zip_open(templatePath.c_str(), ZIP_RDONLY, &error);
+    zip_t *z = zip_open(templatePath.c_str(), ZIP_RDONLY, &error);
     if (z) {
-        auto read_xml_from_zip = [&](const char* filename, pugi::xml_document& target_doc) -> bool {
+        auto read_xml_from_zip = [&](const char *filename, pugi::xml_document &target_doc) -> bool {
             zip_stat_t st;
             zip_stat_init(&st);
-            if (zip_stat(z, filename, 0, &st) != 0) return false;
-            zip_file_t* f = zip_fopen(z, filename, 0);
-            if (!f) return false;
+            if (zip_stat(z, filename, 0, &st) != 0)
+                return false;
+            zip_file_t *f = zip_fopen(z, filename, 0);
+            if (!f)
+                return false;
             std::string file_content(st.size, '\0');
             zip_fread(f, file_content.data(), st.size);
             zip_fclose(f);
@@ -136,7 +138,7 @@ Document::Document(const std::string& templatePath) : pimpl(std::make_unique<Imp
             pimpl->styles_root = pimpl->styles_doc.child("w:styles");
             pimpl->has_styles = true;
         }
-        
+
         if (read_xml_from_zip("word/numbering.xml", pimpl->numbering_doc)) {
             pimpl->has_numbering = true;
         }
@@ -145,11 +147,9 @@ Document::Document(const std::string& templatePath) : pimpl(std::make_unique<Imp
 }
 Document::~Document() = default;
 
-void Document::setEvenAndOddHeaders(bool val) {
-    pimpl->even_and_odd_headers = val;
-}
+void Document::setEvenAndOddHeaders(bool val) { pimpl->even_and_odd_headers = val; }
 
-Paragraph Document::addParagraph(const std::string& text) {
+Paragraph Document::addParagraph(const std::string &text) {
     auto sectPr = pimpl->body.child("w:sectPr");
     auto p_node = pimpl->body.insert_child_before("w:p", sectPr);
     Paragraph para_proxy(p_node.internal_object());
@@ -179,7 +179,8 @@ Table Document::addTable(int rows, int cols) {
         b.append_attribute("w:color") = "auto";
     }
     auto tblGrid = tbl.append_child("w:tblGrid");
-    for (int c = 0; c < cols; ++c) tblGrid.append_child("w:gridCol");
+    for (int c = 0; c < cols; ++c)
+        tblGrid.append_child("w:gridCol");
     for (int r = 0; r < rows; ++r) {
         auto tr = tbl.append_child("w:tr");
         for (int c = 0; c < cols; ++c) {
@@ -188,7 +189,7 @@ Table Document::addTable(int rows, int cols) {
             auto tcW = tcPr.append_child("w:tcW");
             tcW.append_attribute("w:w") = "0";
             tcW.append_attribute("w:type") = "auto";
-            
+
             // Critical OOXML Requirement: Every w:tc must end with at least one paragraph (even an empty one)
             tc.append_child("w:p");
         }
@@ -214,77 +215,105 @@ void Document::addStyle(gsl::czstring styleId, gsl::czstring name) {
 bool Document::save(gsl::czstring filepath) {
     try {
         int error = 0;
-        zip_t* z = zip_open(filepath, ZIP_CREATE | ZIP_TRUNCATE, &error);
-        if (!z) return false;
-        
-        std::list<std::string> zip_buffers; 
+        zip_t *z = zip_open(filepath, ZIP_CREATE | ZIP_TRUNCATE, &error);
+        if (!z)
+            return false;
+
+        std::list<std::string> zip_buffers;
         int start_id = pimpl->doc.child("w:document").attribute("openword_next_rel_id").as_int(100);
         pimpl->doc_rels.setNextId(start_id);
 
-        std::string ct = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
-                         "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n"
-                         "  <Default Extension=\"jpg\" ContentType=\"image/jpeg\"/>\n"
-                         "  <Default Extension=\"png\" ContentType=\"image/png\"/>\n"
-                         "  <Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n"
-                         "  <Default Extension=\"xml\" ContentType=\"application/xml\"/>\n"
-                         "  <Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>\n";
+        std::string ct =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
+            "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n"
+            "  <Default Extension=\"jpg\" ContentType=\"image/jpeg\"/>\n"
+            "  <Default Extension=\"png\" ContentType=\"image/png\"/>\n"
+            "  <Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>\n"
+            "  <Default Extension=\"xml\" ContentType=\"application/xml\"/>\n"
+            "  <Override PartName=\"/word/document.xml\" "
+            "ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>\n";
 
         if (pimpl->has_metadata) {
-            std::string core_props = 
+            std::string core_props =
                 "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
-                "<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" "
+                "<cp:coreProperties "
+                "xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" "
                 "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\" "
-                "xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n";
-            
-            if (!pimpl->metadata.title.empty()) core_props += fmt::format("  <dc:title>{}</dc:title>\n", pimpl->metadata.title);
-            if (!pimpl->metadata.subject.empty()) core_props += fmt::format("  <dc:subject>{}</dc:subject>\n", pimpl->metadata.subject);
-            if (!pimpl->metadata.author.empty()) core_props += fmt::format("  <dc:creator>{}</dc:creator>\n", pimpl->metadata.author);
-            if (!pimpl->metadata.keywords.empty()) core_props += fmt::format("  <cp:keywords>{}</cp:keywords>\n", pimpl->metadata.keywords);
-            if (!pimpl->metadata.comments.empty()) core_props += fmt::format("  <dc:description>{}</dc:description>\n", pimpl->metadata.comments);
-            if (!pimpl->metadata.lastModifiedBy.empty()) core_props += fmt::format("  <cp:lastModifiedBy>{}</cp:lastModifiedBy>\n", pimpl->metadata.lastModifiedBy);
-            if (!pimpl->metadata.category.empty()) core_props += fmt::format("  <cp:category>{}</cp:category>\n", pimpl->metadata.category);
-            
+                "xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" "
+                "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n";
+
+            if (!pimpl->metadata.title.empty())
+                core_props += fmt::format("  <dc:title>{}</dc:title>\n", pimpl->metadata.title);
+            if (!pimpl->metadata.subject.empty())
+                core_props += fmt::format("  <dc:subject>{}</dc:subject>\n", pimpl->metadata.subject);
+            if (!pimpl->metadata.author.empty())
+                core_props += fmt::format("  <dc:creator>{}</dc:creator>\n", pimpl->metadata.author);
+            if (!pimpl->metadata.keywords.empty())
+                core_props += fmt::format("  <cp:keywords>{}</cp:keywords>\n", pimpl->metadata.keywords);
+            if (!pimpl->metadata.comments.empty())
+                core_props += fmt::format("  <dc:description>{}</dc:description>\n", pimpl->metadata.comments);
+            if (!pimpl->metadata.lastModifiedBy.empty())
+                core_props +=
+                    fmt::format("  <cp:lastModifiedBy>{}</cp:lastModifiedBy>\n", pimpl->metadata.lastModifiedBy);
+            if (!pimpl->metadata.category.empty())
+                core_props += fmt::format("  <cp:category>{}</cp:category>\n", pimpl->metadata.category);
+
             core_props += "</cp:coreProperties>";
-            
+
             zip_buffers.push_back(core_props);
-            zip_file_add(z, "docProps/core.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-            ct += "  <Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>\n";
-            
+            zip_file_add(z, "docProps/core.xml",
+                         zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                         ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            ct += "  <Override PartName=\"/docProps/core.xml\" "
+                  "ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>\n";
+
             // App.xml (Extended Properties)
-            std::string app_props = 
+            std::string app_props =
                 "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
                 "<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" "
                 "xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">\n"
                 "  <Application>OpenWord C++</Application>\n"
                 "  <DocSecurity>0</DocSecurity>\n"
                 "  <ScaleCrop>false</ScaleCrop>\n"
-                "  <HeadingPairs><vt:vector size=\"2\" baseType=\"variant\"><vt:variant><vt:lpstr>Title</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs>\n"
-                "  <TitlesOfParts><vt:vector size=\"1\" baseType=\"lpstr\"><vt:lpstr>" + (pimpl->metadata.title.empty() ? "Document" : pimpl->metadata.title) + "</vt:lpstr></vt:vector></TitlesOfParts>\n"
+                "  <HeadingPairs><vt:vector size=\"2\" "
+                "baseType=\"variant\"><vt:variant><vt:lpstr>Title</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></"
+                "vt:variant></vt:vector></HeadingPairs>\n"
+                "  <TitlesOfParts><vt:vector size=\"1\" baseType=\"lpstr\"><vt:lpstr>" +
+                (pimpl->metadata.title.empty() ? "Document" : pimpl->metadata.title) +
+                "</vt:lpstr></vt:vector></TitlesOfParts>\n"
                 "  <LinksUpToDate>false</LinksUpToDate>\n"
                 "  <SharedDoc>false</SharedDoc>\n"
                 "  <HyperlinksChanged>false</HyperlinksChanged>\n"
                 "  <AppVersion>16.0000</AppVersion>\n";
-            
-            if (!pimpl->metadata.company.empty()) app_props += fmt::format("  <Company>{}</Company>\n", pimpl->metadata.company);
-            if (!pimpl->metadata.manager.empty()) app_props += fmt::format("  <Manager>{}</Manager>\n", pimpl->metadata.manager);
-            if (!pimpl->metadata.hyperlinkBase.empty()) app_props += fmt::format("  <HyperlinkBase>{}</HyperlinkBase>\n", pimpl->metadata.hyperlinkBase);
-            
+
+            if (!pimpl->metadata.company.empty())
+                app_props += fmt::format("  <Company>{}</Company>\n", pimpl->metadata.company);
+            if (!pimpl->metadata.manager.empty())
+                app_props += fmt::format("  <Manager>{}</Manager>\n", pimpl->metadata.manager);
+            if (!pimpl->metadata.hyperlinkBase.empty())
+                app_props += fmt::format("  <HyperlinkBase>{}</HyperlinkBase>\n", pimpl->metadata.hyperlinkBase);
+
             app_props += "</Properties>";
             zip_buffers.push_back(app_props);
-            zip_file_add(z, "docProps/app.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-            ct += "  <Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>\n";
-            
+            zip_file_add(z, "docProps/app.xml",
+                         zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                         ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            ct += "  <Override PartName=\"/docProps/app.xml\" "
+                  "ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>\n";
+
             // Custom.xml (Custom Properties)
             if (!pimpl->metadata.customProperties.empty()) {
-                std::string custom_props = 
+                std::string custom_props =
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
                     "<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/custom-properties\" "
                     "xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">\n";
-                
+
                 int pid = 2;
-                for (const auto& [name, prop] : pimpl->metadata.customProperties) {
-                    custom_props += fmt::format("  <property fmtid=\"{{D5CDD505-2E9C-101B-9397-08002B2CF9AE}}\" pid=\"{}\" name=\"{}\">\n", pid++, name);
-                    
+                for (const auto &[name, prop] : pimpl->metadata.customProperties) {
+                    custom_props += fmt::format(
+                        "  <property fmtid=\"{{D5CDD505-2E9C-101B-9397-08002B2CF9AE}}\" pid=\"{}\" name=\"{}\">\n",
+                        pid++, name);
+
                     if (prop.type == CustomProperty::Type::Text) {
                         custom_props += fmt::format("    <vt:lpwstr>{}</vt:lpwstr>\n", prop.value);
                     } else if (prop.type == CustomProperty::Type::Integer) {
@@ -296,14 +325,17 @@ bool Document::save(gsl::czstring filepath) {
                     } else if (prop.type == CustomProperty::Type::Date) {
                         custom_props += fmt::format("    <vt:filetime>{}</vt:filetime>\n", prop.value);
                     }
-                    
+
                     custom_props += "  </property>\n";
                 }
                 custom_props += "</Properties>";
-                
+
                 zip_buffers.push_back(custom_props);
-                zip_file_add(z, "docProps/custom.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-                ct += "  <Override PartName=\"/docProps/custom.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.custom-properties+xml\"/>\n";
+                zip_file_add(z, "docProps/custom.xml",
+                             zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                             ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+                ct += "  <Override PartName=\"/docProps/custom.xml\" "
+                      "ContentType=\"application/vnd.openxmlformats-officedocument.custom-properties+xml\"/>\n";
             }
         }
 
@@ -311,27 +343,39 @@ bool Document::save(gsl::czstring filepath) {
             std::stringstream fs;
             pimpl->footnotes_doc.save(fs, "", pugi::format_raw);
             zip_buffers.push_back(fs.str());
-            zip_file_add(z, "word/footnotes.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-            pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes", "footnotes.xml");
-            ct += "  <Override PartName=\"/word/footnotes.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml\"/>\n";
+            zip_file_add(z, "word/footnotes.xml",
+                         zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                         ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            pimpl->doc_rels.addRelationship(
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes", "footnotes.xml");
+            ct += "  <Override PartName=\"/word/footnotes.xml\" "
+                  "ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml\"/>\n";
         }
 
         if (pimpl->next_endnote_id > 1) {
             std::stringstream es;
             pimpl->endnotes_doc.save(es, "", pugi::format_raw);
             zip_buffers.push_back(es.str());
-            zip_file_add(z, "word/endnotes.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-            pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes", "endnotes.xml");
-            ct += "  <Override PartName=\"/word/endnotes.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml\"/>\n";
+            zip_file_add(z, "word/endnotes.xml",
+                         zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                         ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            pimpl->doc_rels.addRelationship(
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes", "endnotes.xml");
+            ct += "  <Override PartName=\"/word/endnotes.xml\" "
+                  "ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml\"/>\n";
         }
 
         if (pimpl->next_comment_id > 0) {
             std::stringstream cs;
             pimpl->comments_doc.save(cs, "", pugi::format_raw);
             zip_buffers.push_back(cs.str());
-            zip_file_add(z, "word/comments.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-            pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments", "comments.xml");
-            ct += "  <Override PartName=\"/word/comments.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/>\n";
+            zip_file_add(z, "word/comments.xml",
+                         zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                         ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            pimpl->doc_rels.addRelationship(
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments", "comments.xml");
+            ct += "  <Override PartName=\"/word/comments.xml\" "
+                  "ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/>\n";
         }
 
         auto links_store = pimpl->doc.child("w:document").child("openword_hyperlinks");
@@ -339,7 +383,9 @@ bool Document::save(gsl::czstring filepath) {
             for (auto m : links_store.children("link")) {
                 std::string url = m.attribute("url").value();
                 std::string rid = m.attribute("rId").value();
-                pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink", url, rid, "External");
+                pimpl->doc_rels.addRelationship(
+                    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink", url, rid,
+                    "External");
             }
             pimpl->doc.child("w:document").remove_child(links_store);
         }
@@ -348,9 +394,13 @@ bool Document::save(gsl::czstring filepath) {
             std::stringstream ss;
             pimpl->styles_doc.save(ss, "", pugi::format_raw);
             zip_buffers.push_back(ss.str());
-            zip_file_add(z, "word/styles.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-            pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles", "styles.xml");
-            ct += "  <Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>\n";
+            zip_file_add(z, "word/styles.xml",
+                         zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                         ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            pimpl->doc_rels.addRelationship(
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles", "styles.xml");
+            ct += "  <Override PartName=\"/word/styles.xml\" "
+                  "ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>\n";
         }
 
         auto media_store = pimpl->doc.child("w:document").child("openword_media");
@@ -362,9 +412,11 @@ bool Document::save(gsl::czstring filepath) {
                 std::string old_rid = m.attribute("rId").value();
                 std::string ext = "png";
                 auto dot_pos = path.find_last_of('.');
-                if (dot_pos != std::string::npos) ext = path.substr(dot_pos + 1);
+                if (dot_pos != std::string::npos)
+                    ext = path.substr(dot_pos + 1);
                 std::string target = "media/image" + std::to_string(media_count) + "." + ext;
-                pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/image", target, old_rid);
+                pimpl->doc_rels.addRelationship(
+                    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image", target, old_rid);
                 zip_file_add(z, ("word/" + target).c_str(), zip_source_file(z, path.c_str(), 0, 0), ZIP_FL_OVERWRITE);
             }
             pimpl->doc.child("w:document").remove_child(media_store);
@@ -385,10 +437,16 @@ bool Document::save(gsl::czstring filepath) {
                 std::stringstream ss;
                 pdoc.save(ss, "", pugi::format_raw);
                 zip_buffers.push_back(ss.str());
-                zip_file_add(z, ("word/" + pfile).c_str(), zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-                std::string relType = (ptype == "header") ? "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" : "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer";
+                zip_file_add(z, ("word/" + pfile).c_str(),
+                             zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                             ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+                std::string relType =
+                    (ptype == "header") ? "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"
+                                        : "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer";
                 pimpl->doc_rels.addRelationship(relType, pfile, prid);
-                ct += "  <Override PartName=\"/word/" + pfile + "\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml." + ptype + "+xml\"/>\n";
+                ct += "  <Override PartName=\"/word/" + pfile +
+                      "\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml." + ptype +
+                      "+xml\"/>\n";
             }
             pimpl->doc.child("w:document").remove_child(parts);
         }
@@ -397,9 +455,13 @@ bool Document::save(gsl::czstring filepath) {
             std::stringstream ss;
             pimpl->numbering_doc.save(ss, "", pugi::format_raw);
             zip_buffers.push_back(ss.str());
-            zip_file_add(z, "word/numbering.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-            pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering", "numbering.xml");
-            ct += "  <Override PartName=\"/word/numbering.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml\"/>\n";
+            zip_file_add(z, "word/numbering.xml",
+                         zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                         ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            pimpl->doc_rels.addRelationship(
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering", "numbering.xml");
+            ct += "  <Override PartName=\"/word/numbering.xml\" "
+                  "ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml\"/>\n";
         }
 
         int current_rel_id = pimpl->doc.child("w:document").attribute("openword_next_rel_id").as_int(100);
@@ -407,12 +469,16 @@ bool Document::save(gsl::czstring filepath) {
         std::stringstream doc_stream;
         pimpl->doc.save(doc_stream, "", pugi::format_raw);
         zip_buffers.push_back(doc_stream.str());
-        zip_file_add(z, "word/document.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-        pimpl->doc.child("w:document").append_attribute("openword_next_rel_id") = std::to_string(current_rel_id).c_str();
+        zip_file_add(z, "word/document.xml",
+                     zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                     ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+        pimpl->doc.child("w:document").append_attribute("openword_next_rel_id") =
+            std::to_string(current_rel_id).c_str();
 
         if (pimpl->needs_update_fields || pimpl->even_and_odd_headers) {
-            std::string settings_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
-                                       "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">\n";
+            std::string settings_xml =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
+                "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">\n";
             if (pimpl->needs_update_fields) {
                 settings_xml += "  <w:updateFields w:val=\"true\"/>\n";
             }
@@ -421,9 +487,13 @@ bool Document::save(gsl::czstring filepath) {
             }
             settings_xml += "</w:settings>";
             zip_buffers.push_back(settings_xml);
-            zip_file_add(z, "word/settings.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
-            pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings", "settings.xml");
-            ct += "  <Override PartName=\"/word/settings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/>\n";
+            zip_file_add(z, "word/settings.xml",
+                         zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                         ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            pimpl->doc_rels.addRelationship(
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings", "settings.xml");
+            ct += "  <Override PartName=\"/word/settings.xml\" "
+                  "ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/>\n";
         }
 
         if (!pimpl->doc_rels.empty()) {
@@ -438,43 +508,56 @@ bool Document::save(gsl::czstring filepath) {
             std::stringstream rs;
             rels_doc.save(rs, "", pugi::format_raw);
             zip_buffers.push_back(rs.str());
-            zip_file_add(z, "word/_rels/document.xml.rels", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            zip_file_add(z, "word/_rels/document.xml.rels",
+                         zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                         ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
         }
 
         ct += "</Types>";
-        zip_file_add(z, "[Content_Types].xml", zip_source_buffer(z, ct.data(), ct.size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+        zip_file_add(z, "[Content_Types].xml", zip_source_buffer(z, ct.data(), ct.size(), 0),
+                     ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
 
-        std::string root_rels = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
+        std::string root_rels =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
             "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n"
-            "  <Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>\n";
+            "  <Relationship Id=\"rId1\" "
+            "Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" "
+            "Target=\"word/document.xml\"/>\n";
         if (pimpl->has_metadata) {
-            root_rels += "  <Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties\" Target=\"docProps/core.xml\"/>\n";
-            root_rels += "  <Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties\" Target=\"docProps/app.xml\"/>\n";
+            root_rels += "  <Relationship Id=\"rId2\" "
+                         "Type=\"http://schemas.openxmlformats.org/package/2006/relationships/metadata/"
+                         "core-properties\" Target=\"docProps/core.xml\"/>\n";
+            root_rels += "  <Relationship Id=\"rId3\" "
+                         "Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
+                         "extended-properties\" Target=\"docProps/app.xml\"/>\n";
             if (!pimpl->metadata.customProperties.empty()) {
-                root_rels += "  <Relationship Id=\"rId4\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties\" Target=\"docProps/custom.xml\"/>\n";
+                root_rels += "  <Relationship Id=\"rId4\" "
+                             "Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
+                             "custom-properties\" Target=\"docProps/custom.xml\"/>\n";
             }
         }
         root_rels += "</Relationships>";
-        zip_file_add(z, "_rels/.rels", zip_source_buffer(z, root_rels.data(), root_rels.size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+        zip_file_add(z, "_rels/.rels", zip_source_buffer(z, root_rels.data(), root_rels.size(), 0),
+                     ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
 
         zip_close(z);
         return true;
-    } catch(...) { return false; }
+    } catch (...) {
+        return false;
+    }
 }
 
-std::string Document::convertMathMLToOMML(const std::string& mathml) const { return convert_mathml_to_omml(mathml); }
-std::string Document::convertLaTeXToOMML(const std::string& latex) const { return convert_latex_to_omml(latex); }
+std::string Document::convertMathMLToOMML(const std::string &mathml) const { return convert_mathml_to_omml(mathml); }
+std::string Document::convertLaTeXToOMML(const std::string &latex) const { return convert_latex_to_omml(latex); }
 
-void Document::setMetadata(const Metadata& meta) {
+void Document::setMetadata(const Metadata &meta) {
     pimpl->metadata = meta;
     pimpl->has_metadata = true;
 }
 
-Metadata Document::metadata() const {
-    return pimpl->metadata;
-}
+Metadata Document::metadata() const { return pimpl->metadata; }
 
-int Document::createFootnote(const std::string& text) {
+int Document::createFootnote(const std::string &text) {
     int id = pimpl->next_footnote_id++;
     auto fn = pimpl->footnotes_root.append_child("w:footnote");
     fn.append_attribute("w:id") = std::to_string(id).c_str();
@@ -491,7 +574,7 @@ int Document::createFootnote(const std::string& text) {
     return id;
 }
 
-int Document::createEndnote(const std::string& text) {
+int Document::createEndnote(const std::string &text) {
     int id = pimpl->next_endnote_id++;
     auto en = pimpl->endnotes_root.append_child("w:endnote");
     en.append_attribute("w:id") = std::to_string(id).c_str();
@@ -508,9 +591,7 @@ int Document::createEndnote(const std::string& text) {
     return id;
 }
 
-StyleCollection Document::styles() {
-    return StyleCollection(pimpl->styles_root.internal_object());
-}
+StyleCollection Document::styles() { return StyleCollection(pimpl->styles_root.internal_object()); }
 
 NumberingCollection Document::numbering() {
     pimpl->has_numbering = true;
@@ -528,7 +609,7 @@ NumberingCollection Document::numbering() {
 void Document::addTableOfContents(gsl::czstring title, int max_levels, TOCLeader leader) {
     pimpl->needs_update_fields = true;
     auto sectPr = pimpl->body.child("w:sectPr");
-    
+
     if (title && title[0] != '\0') {
         auto pTitle = pimpl->body.insert_child_before("w:p", sectPr);
         pTitle.append_child("w:pPr").append_child("w:pStyle").append_attribute("w:val") = "TOCHeading";
@@ -549,27 +630,31 @@ void Document::addTableOfContents(gsl::czstring title, int max_levels, TOCLeader
     auto fldBegin = r1.append_child("w:fldChar");
     fldBegin.append_attribute("w:fldCharType") = "begin";
     fldBegin.append_attribute("w:dirty") = "true";
-    
+
     auto r2 = p1.append_child("w:r");
     auto instr = r2.append_child("w:instrText");
     instr.append_attribute("xml:space") = "preserve";
-    
+
     std::string leaderChar = "";
-    if (leader == TOCLeader::Hyphen) leaderChar = " \\p \"-\"";
-    else if (leader == TOCLeader::Underscore) leaderChar = " \\p \"_\"";
-    else if (leader == TOCLeader::None) leaderChar = " \\p \" \"";
+    if (leader == TOCLeader::Hyphen)
+        leaderChar = " \\p \"-\"";
+    else if (leader == TOCLeader::Underscore)
+        leaderChar = " \\p \"_\"";
+    else if (leader == TOCLeader::None)
+        leaderChar = " \\p \" \"";
     // default dot doesn't need explicit \p switch
-    
+
     std::string instrVal = fmt::format(R"(TOC \o "1-{}" \h \z \u{})", max_levels, leaderChar);
     instr.text().set(instrVal.c_str());
-    
+
     auto r3 = p1.append_child("w:r");
     r3.append_child("w:fldChar").append_attribute("w:fldCharType") = "separate";
-    
+
     auto p2 = sdtContent.append_child("w:p");
     p2.append_child("w:pPr").append_child("w:pStyle").append_attribute("w:val") = "TOC1";
-    p2.append_child("w:r").append_child("w:t").text().set("Right-click here and select 'Update Field' to generate TOC.");
-    
+    p2.append_child("w:r").append_child("w:t").text().set(
+        "Right-click here and select 'Update Field' to generate TOC.");
+
     auto p3 = sdtContent.append_child("w:p");
     p3.append_child("w:pPr").append_child("w:pStyle").append_attribute("w:val") = "TOC1";
     p3.append_child("w:r").append_child("w:fldChar").append_attribute("w:fldCharType") = "end";
@@ -578,23 +663,29 @@ void Document::addTableOfContents(gsl::czstring title, int max_levels, TOCLeader
 bool Document::load(gsl::czstring filepath) {
     try {
         int error = 0;
-        zip_t* z = zip_open(filepath, ZIP_RDONLY, &error);
-        if (!z) return false;
+        zip_t *z = zip_open(filepath, ZIP_RDONLY, &error);
+        if (!z)
+            return false;
         pimpl->doc.reset();
         pimpl->styles_doc.reset();
         pimpl->has_styles = false;
-        auto read_xml_from_zip = [&](const char* filename, pugi::xml_document& target_doc) -> bool {
+        auto read_xml_from_zip = [&](const char *filename, pugi::xml_document &target_doc) -> bool {
             zip_stat_t st;
             zip_stat_init(&st);
-            if (zip_stat(z, filename, 0, &st) != 0) return false;
-            zip_file_t* f = zip_fopen(z, filename, 0);
-            if (!f) return false;
+            if (zip_stat(z, filename, 0, &st) != 0)
+                return false;
+            zip_file_t *f = zip_fopen(z, filename, 0);
+            if (!f)
+                return false;
             std::string content(st.size, '\0');
             zip_fread(f, content.data(), st.size);
             zip_fclose(f);
             return target_doc.load_string(content.c_str());
         };
-        if (!read_xml_from_zip("word/document.xml", pimpl->doc)) { zip_close(z); return false; }
+        if (!read_xml_from_zip("word/document.xml", pimpl->doc)) {
+            zip_close(z);
+            return false;
+        }
         pimpl->body = pimpl->doc.child("w:document").child("w:body");
         if (read_xml_from_zip("word/styles.xml", pimpl->styles_doc)) {
             pimpl->has_styles = true;
@@ -602,25 +693,29 @@ bool Document::load(gsl::czstring filepath) {
         }
         zip_close(z);
         return true;
-    } catch (...) { return false; }
+    } catch (...) {
+        return false;
+    }
 }
 
 Section Document::finalSection() { return Section(pimpl->body.child("w:sectPr").internal_object()); }
 std::vector<Paragraph> Document::paragraphs() const {
     std::vector<Paragraph> result;
-    for (auto node : pimpl->body.children("w:p")) result.push_back(Paragraph(node.internal_object()));
+    for (auto node : pimpl->body.children("w:p"))
+        result.push_back(Paragraph(node.internal_object()));
     return result;
 }
 
 std::vector<Table> Document::tables() const {
     std::vector<Table> result;
-    for (auto node : pimpl->body.children("w:tbl")) result.push_back(Table(node.internal_object()));
+    for (auto node : pimpl->body.children("w:tbl"))
+        result.push_back(Table(node.internal_object()));
     return result;
 }
 
-int Document::replaceText(const std::string& search, const std::string& replace) {
+int Document::replaceText(const std::string &search, const std::string &replace) {
     int count = 0;
-    
+
     // Replace in body paragraphs and tables
     for (auto node : pimpl->body.children()) {
         std::string name = node.name();
@@ -630,7 +725,7 @@ int Document::replaceText(const std::string& search, const std::string& replace)
             count += Table(node.internal_object()).replaceText(search, replace);
         }
     }
-    
+
     // Replace in headers and footers
     auto parts = pimpl->doc.child("w:document").child("openword_parts");
     if (parts) {
@@ -650,10 +745,9 @@ int Document::replaceText(const std::string& search, const std::string& replace)
             }
         }
     }
-    
+
     return count;
 }
-
 
 std::vector<BlockElement> Document::elements() const {
     std::vector<BlockElement> result;
@@ -670,17 +764,17 @@ std::vector<BlockElement> Document::elements() const {
     return result;
 }
 
+void Document::addWatermark(const std::string &text) {
+    if (text.empty())
+        return;
 
-void Document::addWatermark(const std::string& text) {
-    if (text.empty()) return;
-    
     auto sec = finalSection();
     auto header = sec.addHeader(HeaderFooterType::Default);
     auto p = header.addParagraph();
-    
+
     // We do NOT modify paragraph spacing or size. We leave it as a normal header paragraph.
     // The previous attempt to hide it with spacing=0 probably caused Word to clip or ignore the VML shape entirely.
-    
+
     std::string vmlStr = fmt::format(R"(
         <w:r>
             <w:pict>
@@ -714,24 +808,26 @@ void Document::addWatermark(const std::string& text) {
                 </v:shape>
             </w:pict>
         </w:r>
-    )", text);
-    
+    )",
+                                     text);
+
     p.addRawXml(vmlStr);
 }
 
 } // namespace openword
 
-
-
-int openword::Document::createComment(const std::string& text, const std::string& author, const std::string& initials) {
+int openword::Document::createComment(const std::string &text, const std::string &author, const std::string &initials) {
     int id = pimpl->next_comment_id++;
     auto cmt = pimpl->comments_root.append_child("w:comment");
     cmt.append_attribute("w:id") = std::to_string(id).c_str();
-    if (!author.empty()) cmt.append_attribute("w:author") = author.c_str();
-    if (!initials.empty()) cmt.append_attribute("w:initials") = initials.c_str();
-    
-    // Add current time in UTC using standard library formatting (if available) or rely on Word interpreting missing time. Let's omit date for simplicity and testing consistency.
-    
+    if (!author.empty())
+        cmt.append_attribute("w:author") = author.c_str();
+    if (!initials.empty())
+        cmt.append_attribute("w:initials") = initials.c_str();
+
+    // Add current time in UTC using standard library formatting (if available) or rely on Word interpreting missing
+    // time. Let's omit date for simplicity and testing consistency.
+
     auto p = cmt.append_child("w:p");
     auto pPr = p.append_child("w:pPr");
     pPr.append_child("w:pStyle").append_attribute("w:val") = "CommentText";

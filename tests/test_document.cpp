@@ -1,20 +1,21 @@
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
-#include <openword/Document.h>
-#include <pugixml.hpp>
-#include <zip.h>
-#include <string>
 #include <filesystem>
 #include <fstream>
+#include <openword/Document.h>
+#include <pugixml.hpp>
 #include <sstream>
-#include <algorithm>
+#include <string>
+#include <zip.h>
 
 /**
  * @brief Helper to extract a file from the generated .docx (ZIP)
  */
-std::string extract_file_from_zip(const std::string& zip_path, const std::string& internal_file) {
+std::string extract_file_from_zip(const std::string &zip_path, const std::string &internal_file) {
     int err = 0;
-    zip_t* z = zip_open(zip_path.c_str(), 0, &err);
-    if (!z) return "";
+    zip_t *z = zip_open(zip_path.c_str(), 0, &err);
+    if (!z)
+        return "";
 
     zip_stat_t st;
     zip_stat_init(&st);
@@ -24,7 +25,7 @@ std::string extract_file_from_zip(const std::string& zip_path, const std::string
         return "";
     }
 
-    zip_file_t* f = zip_fopen(z, internal_file.c_str(), 0);
+    zip_file_t *f = zip_fopen(z, internal_file.c_str(), 0);
     if (!f) {
         zip_close(z);
         return "";
@@ -40,16 +41,22 @@ std::string extract_file_from_zip(const std::string& zip_path, const std::string
 
 TEST_CASE("Lists and Numbering Validation", "[lists]") {
     openword::Document doc;
-    
+
     SECTION("Create and validate bullet and numbered lists") {
         auto abs1 = doc.numbering().addAbstractNumbering(1);
-        openword::ListLevel lvl0; lvl0.levelIndex = 0; lvl0.format = openword::NumberingFormat::Bullet; lvl0.text = "-";
-        openword::ListLevel lvl1; lvl1.levelIndex = 1; lvl1.format = openword::NumberingFormat::Decimal; lvl1.text = "%2.";
+        openword::ListLevel lvl0;
+        lvl0.levelIndex = 0;
+        lvl0.format = openword::NumberingFormat::Bullet;
+        lvl0.text = "-";
+        openword::ListLevel lvl1;
+        lvl1.levelIndex = 1;
+        lvl1.format = openword::NumberingFormat::Decimal;
+        lvl1.text = "%2.";
         abs1.addLevel(lvl0);
         abs1.addLevel(lvl1);
-        
+
         int listId = doc.numbering().addList(1);
-        
+
         doc.addParagraph("Bullet Item 1").setList(listId, 0);
         doc.addParagraph("Numbered Item 1").setList(listId, 1);
         doc.addParagraph("Sub-bullet").setList(listId, 0);
@@ -60,12 +67,12 @@ TEST_CASE("Lists and Numbering Validation", "[lists]") {
         // 1. Verify numbering.xml existence and structure
         std::string num_xml = extract_file_from_zip(filename, "word/numbering.xml");
         REQUIRE_FALSE(num_xml.empty());
-        
+
         pugi::xml_document num_doc;
         num_doc.load_string(num_xml.c_str());
         auto root = num_doc.child("w:numbering");
         REQUIRE(root);
-        
+
         // Should have at least 1 abstractNum and 1 num nodes
         REQUIRE(std::distance(root.children("w:abstractNum").begin(), root.children("w:abstractNum").end()) >= 1);
         REQUIRE(std::distance(root.children("w:num").begin(), root.children("w:num").end()) >= 1);
@@ -79,13 +86,13 @@ TEST_CASE("Lists and Numbering Validation", "[lists]") {
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
         pugi::xml_document xml_doc;
         xml_doc.load_string(doc_xml.c_str());
-        
+
         auto body = xml_doc.child("w:document").child("w:body");
         auto p1 = body.child("w:p");
         auto numPr1 = p1.child("w:pPr").child("w:numPr");
         REQUIRE(numPr1);
         REQUIRE(numPr1.child("w:numId").attribute("w:val").as_int() == 1); // Bullet
-        
+
         auto p2 = p1.next_sibling("w:p");
         auto numPr2 = p2.child("w:pPr").child("w:numPr");
         REQUIRE(numPr2);
@@ -93,7 +100,9 @@ TEST_CASE("Lists and Numbering Validation", "[lists]") {
 
         // 3. Verify Relationships
         std::string rels_xml = extract_file_from_zip(filename, "word/_rels/document.xml.rels");
-        REQUIRE(rels_xml.find("Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering\"") != std::string::npos);
+        REQUIRE(
+            rels_xml.find("Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering\"") !=
+            std::string::npos);
         REQUIRE(rels_xml.find("Target=\"numbering.xml\"") != std::string::npos);
 
         // 4. Verify Content_Types
@@ -106,7 +115,7 @@ TEST_CASE("Lists and Numbering Validation", "[lists]") {
 
 TEST_CASE("Document Math Conversion and Insertion", "[math]") {
     openword::Document doc;
-    
+
     SECTION("LaTeX to OMML conversion and insertion") {
         std::string latex = "\\frac{a}{b}";
         std::string omml = doc.convertLaTeXToOMML(latex);
@@ -131,7 +140,7 @@ TEST_CASE("Document Math Conversion and Insertion", "[math]") {
             if (p_node.child("m:oMath")) {
                 found_math = true;
                 // Verify structure of the fraction
-                REQUIRE(p_node.child("m:oMath").child("m:f")); 
+                REQUIRE(p_node.child("m:oMath").child("m:f"));
                 break;
             }
         }
@@ -142,7 +151,7 @@ TEST_CASE("Document Math Conversion and Insertion", "[math]") {
 
 TEST_CASE("Sections and Headers/Footers Validation", "[sections]") {
     openword::Document doc;
-    
+
     SECTION("Complex sections with headers and footers") {
         // Section 1: Landscape
         auto s1 = doc.finalSection();
@@ -171,10 +180,11 @@ TEST_CASE("Sections and Headers/Footers Validation", "[sections]") {
         pugi::xml_document rels_doc;
         rels_doc.load_string(rels_xml.c_str());
         auto rels = rels_doc.child("Relationships");
-        
-        auto find_rel = [&](const std::string& target) {
+
+        auto find_rel = [&](const std::string &target) {
             for (auto r : rels.children("Relationship")) {
-                if (std::string(r.attribute("Target").value()) == target) return true;
+                if (std::string(r.attribute("Target").value()) == target)
+                    return true;
             }
             return false;
         };
@@ -184,31 +194,33 @@ TEST_CASE("Sections and Headers/Footers Validation", "[sections]") {
         // 3. Verify Content_Types
         std::string ct_xml = extract_file_from_zip(filename, "[Content_Types].xml");
         REQUIRE(ct_xml.find("PartName=\"/word/header100.xml\"") != std::string::npos);
-        REQUIRE(ct_xml.find("ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml\"") != std::string::npos);
+        REQUIRE(
+            ct_xml.find("ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml\"") !=
+            std::string::npos);
 
         // 4. Verify XML Schema Order in document.xml
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
         pugi::xml_document xml_doc;
         xml_doc.load_string(doc_xml.c_str());
-        
+
         // Check first section break (inside paragraph)
         auto body = xml_doc.child("w:document").child("w:body");
         auto p1_node = body.find_child_by_attribute("w:p", "w:rsidR", ""); // Just find first p with sectPr
         // Better way: find the p that has a sectPr
         pugi::xml_node sectPr1;
-        for(auto p : body.children("w:p")) {
+        for (auto p : body.children("w:p")) {
             if (p.child("w:pPr").child("w:sectPr")) {
                 sectPr1 = p.child("w:pPr").child("w:sectPr");
                 break;
             }
         }
         REQUIRE(sectPr1);
-        
+
         // CRITICAL: headerReference or footerReference MUST be before pgSz
         auto first_child = sectPr1.first_child();
         std::string first_name = first_child.name();
         REQUIRE((first_name == "w:headerReference" || first_name == "w:footerReference"));
-        
+
         auto pgSz1 = sectPr1.child("w:pgSz");
         REQUIRE(pgSz1);
         REQUIRE(std::string(pgSz1.attribute("w:orient").value()) == "landscape");
@@ -225,12 +237,12 @@ TEST_CASE("Sections and Headers/Footers Validation", "[sections]") {
 
 TEST_CASE("Document Structure Creation", "[document]") {
     openword::Document doc;
-    
+
     SECTION("Can add paragraph and run with styling") {
         auto p = doc.addParagraph("Test Paragraph");
         auto r = p.addRun("Bold text");
         r.setBold(true).setFontSize(24);
-        
+
         bool success = doc.save("test_structure.docx");
         REQUIRE(success == true);
         std::filesystem::remove("test_structure.docx");
@@ -239,7 +251,7 @@ TEST_CASE("Document Structure Creation", "[document]") {
 
 TEST_CASE("Document Loading and Parsing", "[load]") {
     std::string filename = "parse_test.docx";
-    
+
     {
         openword::Document doc;
         auto p1 = doc.addParagraph("First paragraph text.");
@@ -252,7 +264,7 @@ TEST_CASE("Document Loading and Parsing", "[load]") {
     {
         openword::Document doc2;
         REQUIRE(doc2.load(filename.c_str()));
-        
+
         auto paras = doc2.paragraphs();
         REQUIRE(paras.size() == 2);
         REQUIRE(paras[0].text() == "First paragraph text.");
@@ -264,37 +276,38 @@ TEST_CASE("Document Loading and Parsing", "[load]") {
 
 TEST_CASE("OOXML Structure Validation", "[ooxml]") {
     openword::Document doc;
-    
+
     SECTION("Validates that output docx contains required OOXML files and valid XML") {
         doc.styles().add("TestStyle").setName("A Test Style");
         auto p = doc.addParagraph("Paragraph content");
         p.setStyle("TestStyle");
         auto r = p.addRun("Run content");
         r.setBold(true);
-        
+
         std::string filename = "validation_test.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         std::string content_types = extract_file_from_zip(filename, "[Content_Types].xml");
         pugi::xml_document ct_doc;
         REQUIRE(ct_doc.load_string(content_types.c_str()));
-        REQUIRE(ct_doc.child("Types").attribute("xmlns").value() == std::string("http://schemas.openxmlformats.org/package/2006/content-types"));
-        
+        REQUIRE(ct_doc.child("Types").attribute("xmlns").value() ==
+                std::string("http://schemas.openxmlformats.org/package/2006/content-types"));
+
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
         pugi::xml_document doc_dom;
         REQUIRE(doc_dom.load_string(doc_xml.c_str()));
-        
+
         auto body = doc_dom.child("w:document").child("w:body");
         REQUIRE(body);
         auto p_node = body.child("w:p");
         REQUIRE(p_node);
-        
+
         auto pStyle = p_node.child("w:pPr").child("w:pStyle");
         REQUIRE(pStyle.attribute("w:val").value() == std::string("TestStyle"));
-        
+
         auto r1 = p_node.child("w:r");
         REQUIRE(r1.child("w:t").text().get() == std::string("Paragraph content"));
-        
+
         auto r2 = r1.next_sibling("w:r");
         REQUIRE(r2.child("w:t").text().get() == std::string("Run content"));
         REQUIRE(r2.child("w:rPr").child("w:b"));
@@ -305,7 +318,7 @@ TEST_CASE("OOXML Structure Validation", "[ooxml]") {
 
 TEST_CASE("Text Formatting Validation", "[formatting]") {
     openword::Document doc;
-    
+
     SECTION("Can set various text formatting properties") {
         auto p = doc.addParagraph();
         p.addRun("Bold").setBold(true);
@@ -318,10 +331,10 @@ TEST_CASE("Text Formatting Validation", "[formatting]") {
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
         pugi::xml_document doc_dom;
         REQUIRE(doc_dom.load_string(doc_xml.c_str()));
-        
+
         auto body = doc_dom.child("w:document").child("w:body");
         auto p_node = body.child("w:p");
-        
+
         auto r = p_node.child("w:r");
         REQUIRE(r.child("w:rPr").child("w:b"));
 
@@ -343,10 +356,11 @@ TEST_CASE("Table Creation and Validation", "[table]") {
     std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
     pugi::xml_document doc_dom;
     doc_dom.load_string(doc_xml.c_str());
-    
+
     auto tbl = doc_dom.child("w:document").child("w:body").child("w:tbl");
     REQUIRE(tbl);
-    REQUIRE(tbl.child("w:tr").child("w:tc").child("w:p").child("w:r").child("w:t").text().get() == std::string("Top Left"));
+    REQUIRE(tbl.child("w:tr").child("w:tc").child("w:p").child("w:r").child("w:t").text().get() ==
+            std::string("Top Left"));
 
     std::filesystem::remove(filename);
 }
@@ -362,7 +376,7 @@ TEST_CASE("UTF-8 Content Validation", "[utf8]") {
     std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
     pugi::xml_document doc_dom;
     doc_dom.load_string(doc_xml.c_str());
-    
+
     auto t = doc_dom.child("w:document").child("w:body").child("w:p").child("w:r").child("w:t");
     REQUIRE(t.text().get() == text_content);
 
@@ -371,14 +385,14 @@ TEST_CASE("UTF-8 Content Validation", "[utf8]") {
 
 TEST_CASE("Advanced Document Features Validation", "[advanced]") {
     openword::Document doc;
-    
+
     SECTION("Metadata and Core Properties") {
         openword::Metadata meta;
         meta.title = "Test Document API";
         meta.author = "Antigravity";
         meta.subject = "C++ Library";
         doc.setMetadata(meta);
-        
+
         std::string filename = "test_adv_meta.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
 
@@ -392,14 +406,14 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
 
         std::filesystem::remove(filename);
     }
-    
+
     SECTION("Hyperlinks and Multiple ID Management") {
         auto p = doc.addParagraph("Check this:");
         p.addHyperlink(" Google", "https://google.com");
         p.addHyperlink(" GitHub", "https://github.com");
         p.insertBookmark("MyBookmark");
         p.addInternalLink(" LinkBack", "MyBookmark");
-        
+
         std::string filename = "test_adv_links.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
 
@@ -408,7 +422,7 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         REQUIRE(doc_xml.find("Google") != std::string::npos);
         REQUIRE(doc_xml.find("GitHub") != std::string::npos);
         REQUIRE(doc_xml.find("w:bookmarkStart") != std::string::npos);
-        
+
         std::string rel_xml = extract_file_from_zip(filename, "word/_rels/document.xml.rels");
         REQUIRE(rel_xml.find("https://google.com") != std::string::npos);
         REQUIRE(rel_xml.find("https://github.com") != std::string::npos);
@@ -418,15 +432,15 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
 
     SECTION("Table of Contents, Outline Levels, and Settings") {
         doc.addTableOfContents("My TOC", 3);
-        
+
         auto p1 = doc.addParagraph();
         p1.addRun("Chapter 1");
         p1.setOutlineLevel(0);
-        
+
         auto p2 = doc.addParagraph();
         p2.addRun("Chapter 1.1");
         p2.setOutlineLevel(1);
-        
+
         std::string filename = "test_adv_toc.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
 
@@ -451,12 +465,12 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
 
         std::string filename = "test_adv_space.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
         REQUIRE(doc_xml.find("xml:space=\"preserve\"") != std::string::npos);
         REQUIRE(doc_xml.find("> LeadingSpace<") != std::string::npos);
         REQUIRE(doc_xml.find(">TrailingSpace <") != std::string::npos);
-        
+
         std::filesystem::remove(filename);
     }
 
@@ -464,24 +478,23 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         int fnId = doc.createFootnote("This is a footnote text.");
         auto p = doc.addParagraph("Text with note");
         p.addFootnoteReference(fnId);
-        
+
         std::string filename = "test_adv_notes.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
 
         std::string fn_xml = extract_file_from_zip(filename, "word/footnotes.xml");
         REQUIRE_FALSE(fn_xml.empty());
         REQUIRE(fn_xml.find("This is a footnote text.") != std::string::npos);
-        
+
         std::string rel_xml = extract_file_from_zip(filename, "word/_rels/document.xml.rels");
         REQUIRE(rel_xml.find("footnotes.xml") != std::string::npos);
-        
+
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
         REQUIRE(doc_xml.find("w:footnoteReference") != std::string::npos);
 
         std::filesystem::remove(filename);
     }
-    
-    
+
     SECTION("Template Loading and OOP Style Modification") {
         {
             openword::Document baseDoc;
@@ -489,50 +502,49 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
             style.getFont().setSize(48).setColor("FF0000"); // Red
             baseDoc.save("temp_template.docx");
         }
-        
+
         {
             openword::Document doc("temp_template.docx");
             auto p = doc.addParagraph("Template content");
             p.setStyle("MyTheme");
             doc.save("test_adv_template.docx");
-            
+
             std::string doc_xml = extract_file_from_zip("test_adv_template.docx", "word/document.xml");
             REQUIRE(doc_xml.find("w:pStyle w:val=\"MyTheme\"") != std::string::npos);
-            
+
             std::string styles_xml = extract_file_from_zip("test_adv_template.docx", "word/styles.xml");
             REQUIRE(styles_xml.find("w:styleId=\"MyTheme\"") != std::string::npos);
             REQUIRE(styles_xml.find("w:color w:val=\"FF0000\"") != std::string::npos);
             REQUIRE(styles_xml.find("w:sz w:val=\"48\"") != std::string::npos);
         }
-        
+
         std::filesystem::remove("temp_template.docx");
         std::filesystem::remove("test_adv_template.docx");
     }
 
-    
     SECTION("Advanced Table Formatting") {
         auto t = doc.addTable(2, 2);
-        
+
         // Borders
         openword::BorderSettings thickBorder{openword::BorderStyle::Thick, 16, "FF0000"};
         openword::BorderSettings dashedBorder{openword::BorderStyle::Dashed, 8, "00FF00"};
         t.setBorders(thickBorder, dashedBorder);
-        
+
         // Column widths
         t.setColumnWidths({2000, 4000});
-        
+
         // Row heights
         t.row(0).setHeight(1000, openword::HeightRule::Exact);
-        
+
         // Cell shading and alignment
         auto c = t.cell(0, 0);
         c.setShading("DDDDDD");
         c.setVertAlign(openword::VerticalAlignment::Center);
         c.addParagraph("Centered Gray");
-        
+
         std::string filename = "test_adv_table.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
         REQUIRE(doc_xml.find("w:tblBorders") != std::string::npos);
         REQUIRE(doc_xml.find("w:val=\"thick\"") != std::string::npos);
@@ -544,13 +556,12 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::filesystem::remove(filename);
     }
 
-    
     SECTION("Intelligent Text Replacement with Style Preservation") {
         auto p = doc.addParagraph();
         p.addRun("Hello ");
         p.addRun("{{");
         p.addRun("US").setBold(true).setColor(openword::Color(0, 0, 255)); // Blue bold inside the placeholder
-        p.addRun("ER"); // Normal
+        p.addRun("ER");                                                    // Normal
         p.addRun("}}");
         p.addRun(", welcome!");
 
@@ -561,7 +572,7 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         auto sec = doc.finalSection();
         auto header = sec.addHeader();
         header.addParagraph("Header: {{USER}}'s Document");
-        
+
         auto footer = sec.addFooter();
         footer.addParagraph("Footer: Approved by {{USER}}.");
 
@@ -571,20 +582,20 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
 
         std::string filename = "test_adv_replace.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         // 1. Verify main document
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
-        REQUIRE(doc_xml.find("{{USER}}") == std::string::npos); // Target completely gone
-        REQUIRE(doc_xml.find("Alice") != std::string::npos); // Replaced successfully
+        REQUIRE(doc_xml.find("{{USER}}") == std::string::npos);                       // Target completely gone
+        REQUIRE(doc_xml.find("Alice") != std::string::npos);                          // Replaced successfully
         REQUIRE(doc_xml.find("Invoice for Alice details here") != std::string::npos); // Table replacement works
-        
+
         // Verify Style preservation in the heavily fragmented paragraph
         // 'US' was the center run, so the replacement 'Alice' should be housed inside the run with the 0000FF color.
         REQUIRE(doc_xml.find("<w:color w:val=\"0000FF\"/>") != std::string::npos);
-        
+
         // 2. Verify Header
         std::string header_xml = extract_file_from_zip(filename, "word/header100.xml");
-        
+
         REQUIRE(header_xml.find("{{USER}}") == std::string::npos);
         REQUIRE(header_xml.find("Header: Alice's Document") != std::string::npos);
 
@@ -596,16 +607,15 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::filesystem::remove(filename);
     }
 
-    
     SECTION("Floating Image with Text Wrapping") {
         auto p = doc.addParagraph();
-        p.addImage("tests/test.jpg", 1.0, openword::ImagePosition::BehindText, 1000000, 2000000);
-        
+        p.addImage("../tests/test.jpg", 1.0, openword::ImagePosition::BehindText, 1000000, 2000000);
+
         std::string filename = "test_adv_floating.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
-        
+
         // Assertions for specific floating anchor tags
         REQUIRE(doc_xml.find("wp:anchor") != std::string::npos);
         REQUIRE(doc_xml.find("behindDoc=\"1\"") != std::string::npos);
@@ -617,10 +627,9 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::filesystem::remove(filename);
     }
 
-    
     SECTION("Advanced Page Margins and Headers") {
         auto sec = doc.finalSection();
-        
+
         // 1. Set Margins
         openword::Margins m;
         m.top = 1000;
@@ -631,63 +640,64 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         m.footer = 600;
         m.gutter = 700;
         sec.setMargins(m);
-        
+
         // 2. Set Even and Odd headers
         doc.setEvenAndOddHeaders(true);
-        
+
         auto hFirst = sec.addHeader(openword::HeaderFooterType::First);
         hFirst.addParagraph("First Page Header");
-        
+
         auto hEven = sec.addHeader(openword::HeaderFooterType::Even);
         hEven.addParagraph("Even Page Header");
 
         std::string filename = "test_adv_margins.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         // Assertions
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
-        REQUIRE(doc_xml.find("w:pgMar w:top=\"1000\" w:right=\"4000\" w:bottom=\"2000\" w:left=\"3000\" w:header=\"500\" w:footer=\"600\" w:gutter=\"700\"") != std::string::npos);
+        REQUIRE(doc_xml.find("w:pgMar w:top=\"1000\" w:right=\"4000\" w:bottom=\"2000\" w:left=\"3000\" "
+                             "w:header=\"500\" w:footer=\"600\" w:gutter=\"700\"") != std::string::npos);
         REQUIRE(doc_xml.find("w:titlePg") != std::string::npos); // Because HeaderFooterType::First was used
         REQUIRE(doc_xml.find("w:headerReference w:type=\"first\"") != std::string::npos);
         REQUIRE(doc_xml.find("w:headerReference w:type=\"even\"") != std::string::npos);
-        
+
         std::string settings_xml = extract_file_from_zip(filename, "word/settings.xml");
         REQUIRE(settings_xml.find("w:evenAndOddHeaders") != std::string::npos);
 
         std::filesystem::remove(filename);
     }
 
-    
     SECTION("Paragraph Shading, Borders and VML Textbox") {
         // 1. Paragraph Borders and Shading
         auto pCode = doc.addParagraph("Code block");
         pCode.setShading("F4F4F4");
         openword::BorderSettings codeBorder{openword::BorderStyle::Single, 8, "A0A0A0"};
         pCode.setBorders(codeBorder);
-        
+
         // 2. VML TextBox
         auto p = doc.addParagraph("Host paragraph");
         auto tb = p.addTextBox(1828800, 914400, 100000, 200000);
         tb.setFillColor("FFFFE0").setLineColor("FF0000");
         tb.addParagraph("Inside TB");
-        
+
         std::string filename = "test_adv_textbox.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         // --- Validations ---
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
-        
+
         // Validate Paragraph borders
         REQUIRE(doc_xml.find("w:pBdr") != std::string::npos);
-        REQUIRE(doc_xml.find("w:top w:val=\"single\" w:sz=\"8\" w:space=\"1\" w:color=\"A0A0A0\"") != std::string::npos);
+        REQUIRE(doc_xml.find("w:top w:val=\"single\" w:sz=\"8\" w:space=\"1\" w:color=\"A0A0A0\"") !=
+                std::string::npos);
         REQUIRE(doc_xml.find("w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"F4F4F4\"") != std::string::npos);
-        
+
         // Validate VML Textbox existence
         REQUIRE(doc_xml.find("w:pict") != std::string::npos);
         REQUIRE(doc_xml.find("v:shape") != std::string::npos);
         REQUIRE(doc_xml.find("v:textbox") != std::string::npos);
         REQUIRE(doc_xml.find("w:txbxContent") != std::string::npos);
-        
+
         // Validate VML Textbox properties
         REQUIRE(doc_xml.find("fillcolor=\"#FFFFE0\"") != std::string::npos);
         REQUIRE(doc_xml.find("strokecolor=\"#FF0000\"") != std::string::npos);
@@ -696,18 +706,17 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::filesystem::remove(filename);
     }
 
-    
     SECTION("Image Resource Pooling and Hash Deduplication") {
         auto p = doc.addParagraph();
-        p.addImage("tests/test.jpg", 1.0);
-        p.addImage("tests/test.jpg", 0.5); // Same image
-        p.addImage("tests/test.jpg", 2.0); // Same image
-        
+        p.addImage("../tests/test.jpg", 1.0);
+        p.addImage("../tests/test.jpg", 0.5); // Same image
+        p.addImage("../tests/test.jpg", 2.0); // Same image
+
         std::string filename = "test_adv_pool.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
-        
+
         // Count how many times the blip references an image
         size_t blip_count = 0;
         size_t pos = 0;
@@ -716,7 +725,7 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
             pos += 7;
         }
         REQUIRE(blip_count == 3);
-        
+
         // But the relationship ID should be identical if pooling works
         size_t rel_id_count = 0;
         pos = 0;
@@ -724,15 +733,15 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
             rel_id_count++;
             pos += 18;
         }
-        // At least the 3 we just inserted should share the same ID. 
+        // At least the 3 we just inserted should share the same ID.
         // Note: other tests might have inserted images too if the `doc` is shared, but we can assume at least 3.
         REQUIRE(rel_id_count >= 3);
-        
+
         // Assert physical file count in ZIP
         int err = 0;
-        zip_t* z = zip_open(filename.c_str(), 0, &err);
+        zip_t *z = zip_open(filename.c_str(), 0, &err);
         REQUIRE(z != nullptr);
-        
+
         int num_files = zip_get_num_entries(z, 0);
         int media_files = 0;
         for (int i = 0; i < num_files; ++i) {
@@ -742,118 +751,119 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
             }
         }
         zip_close(z);
-        
+
         // Only 1 unique physical file should exist in the media folder for this image
         REQUIRE(media_files == 1);
 
         std::filesystem::remove(filename);
     }
 
-    
     SECTION("Run Highlighting and Character Spacing") {
         auto p = doc.addParagraph();
         p.addRun("Normal text. ");
         p.addRun("Highlighted text.").setHighlight(openword::HighlightColor::Yellow);
         p.addRun("Spaced out text.").setCharacterSpacing(40); // 2 points
-        
+
         std::string filename = "test_adv_run_format.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
         REQUIRE(doc_xml.find("w:highlight w:val=\"yellow\"") != std::string::npos);
         REQUIRE(doc_xml.find("w:spacing w:val=\"40\"") != std::string::npos);
-        
+
         std::filesystem::remove(filename);
     }
-    
+
     SECTION("Table Row Advanced Layout Rules and Extraction") {
         auto t = doc.addTable(2, 2);
-        
+
         // Header row repeats on next page
         t.row(0).setRepeatHeaderRow(true);
         t.cell(0, 0).addParagraph("Header Col 1");
         t.cell(0, 1).addParagraph("Header Col 2");
-        
+
         // Data row cannot split across pages
         t.row(1).setCantSplit(true);
         t.cell(1, 0).addParagraph("Data Col 1");
         t.cell(1, 1).addParagraph("Data Col 2");
-        
+
         std::string filename = "test_adv_table_layout.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
-        
+
         // 1. AST Structural Verification
         pugi::xml_document xml_doc;
         REQUIRE(xml_doc.load_string(doc_xml.c_str()));
         auto body = xml_doc.child("w:document").child("w:body");
         auto tableNode = body.child("w:tbl");
-        
+
         auto tr0 = tableNode.child("w:tr");
         REQUIRE(tr0.child("w:trPr").child("w:tblHeader").attribute("w:val").value() == std::string("true"));
-        
+
         auto tr1 = tr0.next_sibling("w:tr");
         REQUIRE(tr1.child("w:trPr").child("w:cantSplit").attribute("w:val").value() == std::string("true"));
-        
+
         // 2. Data Content Verification using extraction API
         REQUIRE(t.row(0).text() == "Header Col 1 Header Col 2");
         REQUIRE(t.row(1).text() == "Data Col 1 Data Col 2");
-        
+
         std::filesystem::remove(filename);
     }
 
     SECTION("Inject global watermark and custom TOC schemas") {
         doc.addWatermark("CONFIDENTIAL TEST");
         doc.addTableOfContents("My Custom TOC", 3, openword::TOCLeader::Hyphen);
-        
+
         std::string filename = "test_adv_watermark_toc.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
-        
+
         // 1. AST Structural Verification for TOC
         pugi::xml_document xml_doc;
         REQUIRE(xml_doc.load_string(doc_xml.c_str()));
         auto body = xml_doc.child("w:document").child("w:body");
-        
+
         // Find TOC block by looking for SDT
         auto sdt = body.child("w:sdt");
         REQUIRE(sdt);
-        REQUIRE(std::string(sdt.child("w:sdtPr").child("w:docPartObj").child("w:docPartGallery").attribute("w:val").value()) == "Table of Contents");
-        
+        REQUIRE(std::string(
+                    sdt.child("w:sdtPr").child("w:docPartObj").child("w:docPartGallery").attribute("w:val").value()) ==
+                "Table of Contents");
+
         // Verify TOC instruction contains the hyphen switch
         REQUIRE(doc_xml.find(R"(TOC \o "1-3" \h \z \u \p "-")") != std::string::npos);
-        
+
         // 2. OOXML & Content Validation for Watermark in Header
         std::string header_xml = extract_file_from_zip(filename, "word/header100.xml");
         REQUIRE_FALSE(header_xml.empty());
-        
+
         pugi::xml_document hdr_doc;
         REQUIRE(hdr_doc.load_string(header_xml.c_str()));
-        
+
         auto hdr_root = hdr_doc.child("w:hdr");
         REQUIRE(hdr_root);
-        
+
         // Verify VML namespace propagation in root
         REQUIRE(std::string(hdr_root.attribute("xmlns:v").value()) == "urn:schemas-microsoft-com:vml");
         REQUIRE(std::string(hdr_root.attribute("xmlns:o").value()) == "urn:schemas-microsoft-com:office:office");
-        
+
         // Verify Shape structure
         auto pict = hdr_root.child("w:p").child("w:r").child("w:pict");
         REQUIRE(pict);
         auto shape = pict.child("v:shape");
         REQUIRE(shape);
-        
+
         // Verify watermark critical CSS styling
         std::string style_str = shape.attribute("style").value();
         REQUIRE(style_str.find("position:absolute") != std::string::npos);
         REQUIRE(style_str.find("rotation:315") != std::string::npos);
         REQUIRE(style_str.find("z-index:-251658240") != std::string::npos); // Verify behind text layer
-        
+
         // Verify exact content
         REQUIRE(std::string(shape.child("v:textpath").attribute("string").value()) == "CONFIDENTIAL TEST");
-        
+
         // Verify crucial path & formulas exist for Word fallback renderer
         REQUIRE(pict.child("v:shapetype").child("v:formulas"));
         REQUIRE(pict.child("v:shapetype").child("v:handles"));
@@ -865,10 +875,10 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         auto p = doc.addParagraph("Col 1...");
         auto s = p.appendSectionBreak();
         s.setColumns(2, 700);
-        
+
         std::string filename = "test_adv_cols.docx";
         REQUIRE(doc.save(filename.c_str()) == true);
-        
+
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
         REQUIRE(doc_xml.find("w:cols") != std::string::npos);
         REQUIRE(doc_xml.find("w:num=\"2\"") != std::string::npos);
