@@ -12,7 +12,19 @@ namespace openword {
 // Helper to open std::ifstream safely using a UTF-8 path across platforms (especially Windows)
 inline void open_ifstream(std::ifstream &stream, const std::string &utf8_path,
                           std::ios_base::openmode mode = std::ios_base::in) {
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
     std::filesystem::path p = std::filesystem::u8path(utf8_path);
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
     stream.open(p, mode);
 }
 
