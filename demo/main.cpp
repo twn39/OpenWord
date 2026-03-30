@@ -609,18 +609,19 @@ void test_headers_footers() {
     pf.addRun(" of ");
     pf.addTotalPages();
     
-    // Push content to create multiple pages
-    for (int i = 0; i < 60; ++i) {
-        doc.addParagraph("This is line " + std::to_string(i) + ". We need to generate enough text to push the document onto a second page to verify that the PAGE and NUMPAGES dynamic fields correctly compute and render the page numbers across the entire document without hardcoding the digits.");
+    doc.addParagraph("This is the first page (Section 1). It has a header and a footer.");
+    for (int i = 0; i < 15; ++i) {
+        doc.addParagraph("Filler text to pad out page 1...");
     }
     
     // New Section (Remove header, keep footer)
     auto sec2 = doc.addParagraph().appendSectionBreak();
     sec2.removeHeader(); // Unlink header
-    doc.addParagraph("This is Section 2. The header should be GONE, but the footer (with page numbers) should continue continuously from the previous section.");
+    doc.addParagraph("This is Section 2 (Starting on Page 2). The header should be GONE here and on all following pages, but the footer (with page numbers) should continue.");
     
-    for (int i = 0; i < 20; ++i) {
-        doc.addParagraph("More filler text for section 2...");
+    // Push content to create multiple pages in Section 2
+    for (int i = 0; i < 60; ++i) {
+        doc.addParagraph("This is line " + std::to_string(i) + " in Section 2. Because this section has no header, you won't see a header on this page or any subsequent pages in this section.");
     }
     
     doc.save("test_25_headers_footers.docx");
