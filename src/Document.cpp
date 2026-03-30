@@ -188,6 +188,9 @@ Table Document::addTable(int rows, int cols) {
             auto tcW = tcPr.append_child("w:tcW");
             tcW.append_attribute("w:w") = "0";
             tcW.append_attribute("w:type") = "auto";
+            
+            // Critical OOXML Requirement: Every w:tc must end with at least one paragraph (even an empty one)
+            tc.append_child("w:p");
         }
     }
     return Table(tbl.internal_object());
