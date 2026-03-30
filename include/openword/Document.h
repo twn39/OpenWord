@@ -429,6 +429,14 @@ class Cell {
 
 /**
  * @brief Represents a Table in the Word document.
+ * 
+ * @par Example: Creating and Formatting a Table
+ * @code
+ * auto t = doc.addTable(2, 2);
+ * t.setBorders(openword::BorderSettings{openword::BorderStyle::Single, 4, "000000"});
+ * t.cell(0, 0).addParagraph("Top Left");
+ * t.row(0).setRepeatHeaderRow(true);
+ * @endcode
  */
 class Table {
   public:

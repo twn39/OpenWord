@@ -3,7 +3,7 @@ PROJECT_NUMBER         = "1.0.0"
 PROJECT_BRIEF          = "Modern C++17 library for parsing, manipulating, and saving DOCX files."
 
 OUTPUT_DIRECTORY       = "@CMAKE_CURRENT_BINARY_DIR@/docs_doxygen"
-INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/include/openword" "@CMAKE_CURRENT_SOURCE_DIR@/README.md"
+INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/include/openword" "@CMAKE_CURRENT_SOURCE_DIR@/README.md" "@CMAKE_CURRENT_SOURCE_DIR@/docs"
 USE_MDFILE_AS_MAINPAGE = "@CMAKE_CURRENT_SOURCE_DIR@/README.md"
 
 RECURSIVE              = YES
