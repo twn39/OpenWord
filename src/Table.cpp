@@ -484,5 +484,40 @@ Paragraph Table::insertParagraphAfter(const std::string& text) {
     return para;
 }
 
+
+int Cell::gridSpan() const {
+    auto n = cast_node(node_);
+    auto gs = n.child("w:tcPr").child("w:gridSpan");
+    if (gs) return gs.attribute("w:val").as_int(1);
+    return 1;
+}
+
+std::string Cell::vMerge() const {
+    auto n = cast_node(node_);
+    auto vm = n.child("w:tcPr").child("w:vMerge");
+    if (vm) {
+        auto val = vm.attribute("w:val");
+        if (val) return val.value();
+        return "continue"; 
+    }
+    return "";
+}
+
+std::vector<BlockElement> Cell::elements() const {
+    std::vector<BlockElement> result;
+    auto n = cast_node(node_);
+    for (auto child : n.children()) {
+        std::string name = child.name();
+        if (name == "w:p") {
+            result.push_back(Paragraph(child.internal_object()));
+        } else if (name == "w:tbl") {
+            result.push_back(Table(child.internal_object()));
+        } else if (name == "w:sectPr") {
+            result.push_back(Section(child.internal_object()));
+        }
+    }
+    return result;
+}
+
 } // namespace openword
 

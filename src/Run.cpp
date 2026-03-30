@@ -212,4 +212,55 @@ Run& Run::setCharacterSpacing(int twips) {
     return *this;
 }
 
+
+bool Run::isBold() const {
+    auto n = cast_node(node_);
+    auto rPr = n.child("w:rPr");
+    if (!rPr) return false;
+    return rPr.child("w:b") || rPr.child("w:bCs");
+}
+
+bool Run::isItalic() const {
+    auto n = cast_node(node_);
+    auto rPr = n.child("w:rPr");
+    if (!rPr) return false;
+    return rPr.child("w:i") || rPr.child("w:iCs");
+}
+
+bool Run::isStrike() const {
+    auto n = cast_node(node_);
+    auto rPr = n.child("w:rPr");
+    if (!rPr) return false;
+    auto strike = rPr.child("w:strike");
+    if (strike) {
+        auto val = strike.attribute("w:val");
+        return val.empty() || std::string(val.value()) == "true" || std::string(val.value()) == "1";
+    }
+    return false;
+}
+
+HighlightColor Run::highlightColor() const {
+    auto n = cast_node(node_);
+    auto hl = n.child("w:rPr").child("w:highlight");
+    if (hl) {
+        std::string v = hl.attribute("w:val").value();
+        if (v == "yellow") return HighlightColor::Yellow;
+        if (v == "green") return HighlightColor::Green;
+        if (v == "cyan") return HighlightColor::Cyan;
+        if (v == "magenta") return HighlightColor::Magenta;
+        if (v == "blue") return HighlightColor::Blue;
+        if (v == "red") return HighlightColor::Red;
+        if (v == "darkBlue") return HighlightColor::DarkBlue;
+        if (v == "darkCyan") return HighlightColor::DarkCyan;
+        if (v == "darkGreen") return HighlightColor::DarkGreen;
+        if (v == "darkMagenta") return HighlightColor::DarkMagenta;
+        if (v == "darkRed") return HighlightColor::DarkRed;
+        if (v == "darkYellow") return HighlightColor::DarkYellow;
+        if (v == "darkGray") return HighlightColor::DarkGray;
+        if (v == "lightGray") return HighlightColor::LightGray;
+        if (v == "black") return HighlightColor::Black;
+    }
+    return HighlightColor::Default;
+}
+
 } // namespace openword

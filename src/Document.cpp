@@ -558,5 +558,21 @@ int Document::replaceText(const std::string& search, const std::string& replace)
     return count;
 }
 
+
+std::vector<BlockElement> Document::elements() const {
+    std::vector<BlockElement> result;
+    for (auto node : pimpl->body.children()) {
+        std::string name = node.name();
+        if (name == "w:p") {
+            result.push_back(Paragraph(node.internal_object()));
+        } else if (name == "w:tbl") {
+            result.push_back(Table(node.internal_object()));
+        } else if (name == "w:sectPr") {
+            result.push_back(Section(node.internal_object()));
+        }
+    }
+    return result;
+}
+
 } // namespace openword
 

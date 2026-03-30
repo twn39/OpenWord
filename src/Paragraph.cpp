@@ -725,4 +725,38 @@ TextBox& TextBox::setLineColor(const std::string& hexColor) {
     return *this;
 }
 
+
+std::string Paragraph::styleId() const {
+    auto n = cast_node(node_);
+    auto pStyle = n.child("w:pPr").child("w:pStyle");
+    if (pStyle) {
+        return pStyle.attribute("w:val").value();
+    }
+    return "Normal";
+}
+
+std::string Paragraph::alignment() const {
+    auto n = cast_node(node_);
+    auto jc = n.child("w:pPr").child("w:jc");
+    if (jc) {
+        return jc.attribute("w:val").value();
+    }
+    return "left";
+}
+
+bool Paragraph::isList() const {
+    auto n = cast_node(node_);
+    return static_cast<bool>(n.child("w:pPr").child("w:numPr"));
+}
+
+int Paragraph::listLevel() const {
+    auto n = cast_node(node_);
+    auto numPr = n.child("w:pPr").child("w:numPr");
+    if (numPr) {
+        auto ilvl = numPr.child("w:ilvl");
+        if (ilvl) return ilvl.attribute("w:val").as_int(0);
+    }
+    return 0;
+}
+
 } // namespace openword

@@ -3,9 +3,16 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <variant>
 #include <gsl/gsl>
 
 namespace openword {
+
+class Paragraph;
+class Table;
+class Section;
+
+using BlockElement = std::variant<Paragraph, Table, Section>;
 
 
 enum class HighlightColor {
@@ -207,6 +214,10 @@ public:
     Run& setShading(const Color& fillColor);
     
     // --- Data Extractors ---
+    bool isBold() const;
+    bool isItalic() const;
+    bool isStrike() const;
+    HighlightColor highlightColor() const;
     std::string text() const;
 
 private:
@@ -265,6 +276,10 @@ public:
     Section appendSectionBreak();
 
     // --- DOM Traversal & Data Extractors ---
+    std::string styleId() const;
+    std::string alignment() const;
+    bool isList() const;
+    int listLevel() const;
     std::vector<Run> runs() const;
     std::string text() const;
     int replaceText(const std::string& search, const std::string& replace);
@@ -297,6 +312,9 @@ public:
     Cell& setBorders(const BorderSettings& all);
     
     // --- Data Extraction & Manipulation ---
+    int gridSpan() const;
+    std::string vMerge() const;
+    std::vector<BlockElement> elements() const;
     int replaceText(const std::string& search, const std::string& replace);
     std::string text() const;
     std::vector<Paragraph> paragraphs() const;
@@ -329,6 +347,9 @@ public:
     Table& setAlignment(gsl::czstring align);
     
     // --- Data Extraction & Manipulation ---
+    int gridSpan() const;
+    std::string vMerge() const;
+    std::vector<BlockElement> elements() const;
     int replaceText(const std::string& search, const std::string& replace);
     std::string text() const;
     
@@ -417,6 +438,7 @@ public:
     Table addTable(int rows, int cols);
     
     // --- DOM Traversal & Extraction ---
+    std::vector<BlockElement> elements() const;
     Section finalSection();
     std::vector<Paragraph> paragraphs() const;
     std::vector<Table> tables() const;
