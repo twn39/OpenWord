@@ -86,3 +86,95 @@ int NumberingCollection::addList(int abstractNumId, int restartNumId) {
 }
 
 } // namespace openword
+
+
+int openword::NumberingCollection::addBulletList() {
+    auto n = cast_node(node_);
+    
+    // Check if we already created the default bullet abstract num (we use id 9001)
+    int abstractId = 9001;
+    bool found = false;
+    for (auto absNum : n.children("w:abstractNum")) {
+        if (absNum.attribute("w:abstractNumId").as_int() == abstractId) {
+            found = true;
+            break;
+        }
+    }
+    
+    if (!found) {
+        auto abs = addAbstractNumbering(abstractId);
+        
+        ListLevel lvl0;
+        lvl0.levelIndex = 0;
+        lvl0.format = NumberingFormat::Bullet;
+        lvl0.text = ""; // UTF-8 bullet
+        lvl0.fontAscii = "Symbol";
+        lvl0.indentTwips = 720;
+        lvl0.hangingTwips = 360;
+        abs.addLevel(lvl0);
+        
+        ListLevel lvl1;
+        lvl1.levelIndex = 1;
+        lvl1.format = NumberingFormat::Bullet;
+        lvl1.text = "o"; // Circle
+        lvl1.fontAscii = "Courier New";
+        lvl1.indentTwips = 1440;
+        lvl1.hangingTwips = 360;
+        abs.addLevel(lvl1);
+        
+        ListLevel lvl2;
+        lvl2.levelIndex = 2;
+        lvl2.format = NumberingFormat::Bullet;
+        lvl2.text = ""; // Square
+        lvl2.fontAscii = "Wingdings";
+        lvl2.indentTwips = 2160;
+        lvl2.hangingTwips = 360;
+        abs.addLevel(lvl2);
+    }
+    
+    return addList(abstractId);
+}
+
+int openword::NumberingCollection::addNumberedList() {
+    auto n = cast_node(node_);
+    
+    // Check if we already created the default numbered abstract num (we use id 9002)
+    int abstractId = 9002;
+    bool found = false;
+    for (auto absNum : n.children("w:abstractNum")) {
+        if (absNum.attribute("w:abstractNumId").as_int() == abstractId) {
+            found = true;
+            break;
+        }
+    }
+    
+    if (!found) {
+        auto abs = addAbstractNumbering(abstractId);
+        
+        ListLevel lvl0;
+        lvl0.levelIndex = 0;
+        lvl0.format = NumberingFormat::Decimal;
+        lvl0.text = "%1.";
+        lvl0.indentTwips = 720;
+        lvl0.hangingTwips = 360;
+        abs.addLevel(lvl0);
+        
+        ListLevel lvl1;
+        lvl1.levelIndex = 1;
+        lvl1.format = NumberingFormat::LowerLetter;
+        lvl1.text = "%2.";
+        lvl1.indentTwips = 1440;
+        lvl1.hangingTwips = 360;
+        abs.addLevel(lvl1);
+        
+        ListLevel lvl2;
+        lvl2.levelIndex = 2;
+        lvl2.format = NumberingFormat::LowerRoman;
+        lvl2.text = "%3.";
+        lvl2.indentTwips = 2160;
+        lvl2.hangingTwips = 360;
+        abs.addLevel(lvl2);
+    }
+    
+    return addList(abstractId);
+}

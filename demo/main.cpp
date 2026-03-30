@@ -115,7 +115,25 @@ void test_sections_and_headers() {
 
 void test_lists() {
     openword::Document doc;
-    doc.addParagraph("Advanced Multi-Level Lists:");
+    doc.addParagraph("1. Fast Ergonomic Lists:");
+    
+    int bulletList = doc.numbering().addBulletList();
+    doc.addParagraph("Apples").setList(bulletList, 0);
+    doc.addParagraph("Granny Smith").setList(bulletList, 1);
+    doc.addParagraph("Fuji").setList(bulletList, 1);
+    doc.addParagraph("Bananas").setList(bulletList, 0);
+    
+    doc.addParagraph();
+    
+    int numList = doc.numbering().addNumberedList();
+    doc.addParagraph("Step One").setList(numList, 0);
+    doc.addParagraph("Step Two").setList(numList, 0);
+    doc.addParagraph("Sub-step A").setList(numList, 1);
+    doc.addParagraph("Sub-step B").setList(numList, 1);
+    doc.addParagraph("Step Three").setList(numList, 0);
+
+    doc.addParagraph();
+    doc.addParagraph("2. Advanced Multi-Level Lists (Manual):");
     
     // 1. Create an abstract numbering schema
     auto abstractNum = doc.numbering().addAbstractNumbering(1);

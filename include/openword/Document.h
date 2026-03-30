@@ -454,8 +454,14 @@ private:
 class NumberingCollection {
 public:
     explicit NumberingCollection(void* node);
+    
+    // --- Abstract Data ---
     AbstractNumbering addAbstractNumbering(int abstractNumId);
     int addList(int abstractNumId, int restartNumId = -1);
+    
+    // --- High-Level Ergonomic API ---
+    int addBulletList();
+    int addNumberedList();
 private:
     void* node_;
 };
