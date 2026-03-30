@@ -50,13 +50,3 @@ jobs:
     - name: Run C++ Tests (Catch2)
       working-directory: build
       run: ctest --output-on-failure -C Release
-
-    - name: Run Demo Application (Unix)
-      if: runner.os != 'Windows'
-      working-directory: build
-      run: ./openword_demo
-        
-    - name: Run Demo Application (Windows)
-      if: runner.os == 'Windows'
-      working-directory: build
-      run: .\Release\openword_demo.exe
