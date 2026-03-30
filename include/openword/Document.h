@@ -158,7 +158,15 @@ public:
     explicit StyleCollection(void* node);
     
     // Default document properties (w:docDefaults)
+    /**
+     * @brief Retrieves the global document default font settings (`w:docDefaults/w:rPrDefault`).
+     * Modifying this affects all text in the document lacking an explicit style.
+     */
     Font getDefaultFont();
+    
+    /**
+     * @brief Retrieves the global document default paragraph format settings (`w:docDefaults/w:pPrDefault`).
+     */
     ParagraphFormat getDefaultParagraphFormat();
     
     Style get(const std::string& styleId);
@@ -201,7 +209,14 @@ public:
     Footer addFooter(HeaderFooterType type = HeaderFooterType::Default);
     
     // --- Header/Footer Controls ---
+    /**
+     * @brief Removes the header of the specified type from this section and blocks inheritance from previous sections.
+     */
     Section& removeHeader(HeaderFooterType type = HeaderFooterType::Default);
+    
+    /**
+     * @brief Removes the footer of the specified type from this section and blocks inheritance.
+     */
     Section& removeFooter(HeaderFooterType type = HeaderFooterType::Default);
     
     Section& setColumns(int count, int spaceTwips = 720);
@@ -256,10 +271,24 @@ public:
     Run& setVertAlign(VertAlign align);
     Run& setHighlight(HighlightColor color);
     Run& setCharacterSpacing(int twips);
+    /**
+     * @brief Anchors an existing comment to this specific text run.
+     * @param commentId The unique ID of the comment returned by `Document::createComment`.
+     * @return Reference to self for fluent chaining.
+     */
     Run& addComment(int commentId);
 
     // --- Breaks ---
+    /**
+     * @brief Inserts a soft line break (`<w:br/>`) in the current run (equivalent to Shift+Enter).
+     * @return Reference to self for fluent chaining.
+     */
     Run& addLineBreak();
+    
+    /**
+     * @brief Inserts a hard page break (`<w:br w:type="page"/>`) pushing subsequent text to the next page.
+     * @return Reference to self for fluent chaining.
+     */
     Run& addPageBreak();
     
     // --- Backgrounds ---
@@ -289,7 +318,16 @@ public:
     
     Run addRun(const std::string& text = "");
     void addRawXml(const std::string& xml);
+    /**
+     * @brief Injects a dynamic `PAGE` field code to display the current page number.
+     * @return The Run containing the field.
+     */
     Run addPageNumber();
+    
+    /**
+     * @brief Injects a dynamic `NUMPAGES` field code to display the total document page count.
+     * @return The Run containing the field.
+     */
     Run addTotalPages();
     
     /**
@@ -360,6 +398,12 @@ public:
 
     // --- Content Creation ---
     Paragraph addParagraph(const std::string& text = "");
+    /**
+     * @brief Nests a new table inside this cell.
+     * @param rows Initial number of rows.
+     * @param cols Initial number of columns.
+     * @return The proxy object to the newly created nested table.
+     */
     Table addTable(int rows, int cols);
     void addImage(gsl::czstring image_path, double scale = 1.0, ImagePosition position = ImagePosition::Inline, long long xOffset = 0, long long yOffset = 0);
 
@@ -480,6 +524,12 @@ private:
     void* node_;
 };
 
+/**
+ * @brief Represents the main Office Open XML Word document (.docx).
+ * 
+ * This class serves as the main entry point for creating, parsing, and manipulating 
+ * DOCX files. It manages the core lifecycle, resources, relationships, and global configurations.
+ */
 class Document {
 public:
     Document();
@@ -499,6 +549,12 @@ public:
 
     // --- Content Creation ---
     Paragraph addParagraph(const std::string& text = "");
+    /**
+     * @brief Nests a new table inside this cell.
+     * @param rows Initial number of rows.
+     * @param cols Initial number of columns.
+     * @return The proxy object to the newly created nested table.
+     */
     Table addTable(int rows, int cols);
     
     // --- DOM Traversal & Extraction ---
@@ -514,6 +570,13 @@ public:
     void addWatermark(const std::string& text);
     
     int createFootnote(const std::string& text);
+    /**
+     * @brief Creates a new comment in the document's global comments registry.
+     * @param text The comment text.
+     * @param author The author of the comment (defaults to "Author").
+     * @param initials The initials of the author.
+     * @return The unique identifier integer for the created comment, used to anchor it to text.
+     */
     int createComment(const std::string& text, const std::string& author = "Author", const std::string& initials = "");
     int createEndnote(const std::string& text);
     
