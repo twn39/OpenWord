@@ -2,7 +2,7 @@
   <h1>📖 OpenWord</h1>
   <p><strong>A modern, high-performance C++17 library for creating, parsing, and manipulating Microsoft Word (`.docx`) files.</strong></p>
   
-  [![CI](https://github.com/yourusername/openword/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/openword/actions/workflows/ci.yml)
+  [![CI](https://github.com/twn39/OpenWord/actions/workflows/ci.yml/badge.svg)](https://github.com/twn39/OpenWord/actions/workflows/ci.yml)
   [![C++17](https://img.shields.io/badge/standard-C%2B%2B17-blue.svg)](https://en.cppreference.com/w/cpp/17)
   [![Rust](https://img.shields.io/badge/engine-Rust-orange.svg)](https://www.rust-lang.org/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
