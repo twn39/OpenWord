@@ -349,6 +349,8 @@ public:
 
     // --- Content Creation ---
     Paragraph addParagraph(const std::string& text = "");
+    Table addTable(int rows, int cols);
+    void addImage(gsl::czstring image_path, double scale = 1.0, ImagePosition position = ImagePosition::Inline, long long xOffset = 0, long long yOffset = 0);
 
     Cell& setVertAlign(VerticalAlignment align);
     Cell& setShading(const std::string& hexColor);

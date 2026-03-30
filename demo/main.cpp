@@ -547,6 +547,29 @@ void test_comments() {
     fmt::print("- test_22_comments.docx (Comments)\n");
 }
 
+#include "openword/Document.h"
+#include <iostream>
+
+void test_nested_table() {
+    openword::Document doc;
+    auto t1 = doc.addTable(2, 2);
+    t1.cell(0, 0).addParagraph("Outer Top-Left");
+    t1.cell(0, 1).addParagraph("Outer Top-Right");
+    
+    auto t2 = t1.cell(1, 0).addTable(2, 2);
+    t2.setBorders(openword::BorderSettings{openword::BorderStyle::Dashed, 4, "FF0000"});
+    t2.cell(0, 0).addParagraph("Inner 1");
+    t2.cell(0, 1).addParagraph("Inner 2");
+    t2.cell(1, 0).addParagraph("Inner 3");
+    t2.cell(1, 1).addParagraph("Inner 4");
+    
+    t1.cell(1, 1).addImage("tests/test.jpg", 0.5);
+    
+    doc.save("test_23_nested_table.docx");
+    std::cout << "- test_23_nested_table.docx (Nested Tables & Cell Images)\n";
+}
+
+
 void test_metadata_advanced() {
     openword::Document doc;
     
@@ -607,6 +630,7 @@ int main() {
     test_watermark_and_toc();
     test_metadata_advanced();
     test_comments();
+    test_nested_table();
 
     fmt::print("\nDone! Please verify test_20_watermark_toc.docx and test_21_advanced_metadata.docx.\n");
     return 0;

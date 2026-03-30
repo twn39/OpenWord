@@ -108,6 +108,50 @@ Paragraph Cell::addParagraph(const std::string& text) {
     return para;
 }
 
+Table Cell::addTable(int rows, int cols) {
+    auto n = cast_node(node_);
+    // Word allows multiple elements in a cell. We append the table.
+    // However, Word strictly requires that the *very last* element in a w:tc MUST be a w:p (even an empty one).
+    
+    // 1. Append the table
+    auto tbl = n.append_child("w:tbl");
+    auto tblPr = tbl.append_child("w:tblPr");
+    auto tblStyle = tblPr.append_child("w:tblStyle");
+    tblStyle.append_attribute("w:val") = "TableGrid";
+    auto tblW = tblPr.append_child("w:tblW");
+    tblW.append_attribute("w:w") = "0";
+    tblW.append_attribute("w:type") = "auto";
+    auto tblBorders = tblPr.append_child("w:tblBorders");
+    for (auto border : {"w:top", "w:left", "w:bottom", "w:right", "w:insideH", "w:insideV"}) {
+        auto b = tblBorders.append_child(border);
+        b.append_attribute("w:val") = "single";
+        b.append_attribute("w:sz") = "4";
+        b.append_attribute("w:space") = "0";
+        b.append_attribute("w:color") = "auto";
+    }
+    auto tblGrid = tbl.append_child("w:tblGrid");
+    for (int c = 0; c < cols; ++c) tblGrid.append_child("w:gridCol");
+    for (int r = 0; r < rows; ++r) {
+        auto tr = tbl.append_child("w:tr");
+        for (int c = 0; c < cols; ++c) {
+            auto tc = tr.append_child("w:tc");
+            tc.append_child("w:p"); // Each cell must contain at least one empty paragraph
+        }
+    }
+    
+    // 2. Ensure the cell ends with a paragraph
+    if (n.last_child().name() != std::string("w:p")) {
+        n.append_child("w:p");
+    }
+    
+    return Table(tbl.internal_object());
+}
+
+void Cell::addImage(gsl::czstring image_path, double scale, ImagePosition position, long long xOffset, long long yOffset) {
+    // Under the hood, this simply delegats to a new or existing paragraph inside the cell.
+    addParagraph().addImage(image_path, scale, position, xOffset, yOffset);
+}
+
 Cell& Cell::setVertAlign(VerticalAlignment align) {
     auto n = cast_node(node_);
     auto tcPr = n.child("w:tcPr");
