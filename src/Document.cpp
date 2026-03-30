@@ -216,19 +216,72 @@ bool Document::save(gsl::czstring filepath) {
                          "  <Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>\n";
 
         if (pimpl->has_metadata) {
-            std::string core_props = fmt::format(
+            std::string core_props = 
                 "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
-                "<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\" xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n"
-                "  <dc:title>{}</dc:title>\n"
-                "  <dc:creator>{}</dc:creator>\n"
-                "  <dc:subject>{}</dc:subject>\n"
-                "</cp:coreProperties>",
-                pimpl->metadata.title, pimpl->metadata.author, pimpl->metadata.subject
-            );
-            // Ignore company and creation_time for brevity, though they can be mapped to custom props, or dcterms:created
+                "<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" "
+                "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\" "
+                "xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n";
+            
+            if (!pimpl->metadata.title.empty()) core_props += fmt::format("  <dc:title>{}</dc:title>\n", pimpl->metadata.title);
+            if (!pimpl->metadata.subject.empty()) core_props += fmt::format("  <dc:subject>{}</dc:subject>\n", pimpl->metadata.subject);
+            if (!pimpl->metadata.author.empty()) core_props += fmt::format("  <dc:creator>{}</dc:creator>\n", pimpl->metadata.author);
+            if (!pimpl->metadata.keywords.empty()) core_props += fmt::format("  <cp:keywords>{}</cp:keywords>\n", pimpl->metadata.keywords);
+            if (!pimpl->metadata.comments.empty()) core_props += fmt::format("  <dc:description>{}</dc:description>\n", pimpl->metadata.comments);
+            if (!pimpl->metadata.lastModifiedBy.empty()) core_props += fmt::format("  <cp:lastModifiedBy>{}</cp:lastModifiedBy>\n", pimpl->metadata.lastModifiedBy);
+            if (!pimpl->metadata.category.empty()) core_props += fmt::format("  <cp:category>{}</cp:category>\n", pimpl->metadata.category);
+            
+            core_props += "</cp:coreProperties>";
+            
             zip_buffers.push_back(core_props);
             zip_file_add(z, "docProps/core.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             ct += "  <Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>\n";
+            
+            // App.xml (Extended Properties)
+            std::string app_props = 
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
+                "<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" "
+                "xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">\n";
+            
+            if (!pimpl->metadata.company.empty()) app_props += fmt::format("  <Company>{}</Company>\n", pimpl->metadata.company);
+            if (!pimpl->metadata.manager.empty()) app_props += fmt::format("  <Manager>{}</Manager>\n", pimpl->metadata.manager);
+            if (!pimpl->metadata.hyperlinkBase.empty()) app_props += fmt::format("  <HyperlinkBase>{}</HyperlinkBase>\n", pimpl->metadata.hyperlinkBase);
+            
+            app_props += "</Properties>";
+            zip_buffers.push_back(app_props);
+            zip_file_add(z, "docProps/app.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            ct += "  <Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>\n";
+            
+            // Custom.xml (Custom Properties)
+            if (!pimpl->metadata.customProperties.empty()) {
+                std::string custom_props = 
+                    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
+                    "<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/custom-properties\" "
+                    "xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">\n";
+                
+                int pid = 2;
+                for (const auto& [name, prop] : pimpl->metadata.customProperties) {
+                    custom_props += fmt::format("  <property fmtid=\"{{000000D5-0000-0000-C000-000000000046}}\" pid=\"{}\" name=\"{}\">\n", pid++, name);
+                    
+                    if (prop.type == CustomProperty::Type::Text) {
+                        custom_props += fmt::format("    <vt:lpwstr>{}</vt:lpwstr>\n", prop.value);
+                    } else if (prop.type == CustomProperty::Type::Integer) {
+                        custom_props += fmt::format("    <vt:i4>{}</vt:i4>\n", prop.value);
+                    } else if (prop.type == CustomProperty::Type::Boolean) {
+                        custom_props += fmt::format("    <vt:bool>{}</vt:bool>\n", prop.value);
+                    } else if (prop.type == CustomProperty::Type::Double) {
+                        custom_props += fmt::format("    <vt:r8>{}</vt:r8>\n", prop.value);
+                    } else if (prop.type == CustomProperty::Type::Date) {
+                        custom_props += fmt::format("    <vt:filetime>{}</vt:filetime>\n", prop.value);
+                    }
+                    
+                    custom_props += "  </property>\n";
+                }
+                custom_props += "</Properties>";
+                
+                zip_buffers.push_back(custom_props);
+                zip_file_add(z, "docProps/custom.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+                ct += "  <Override PartName=\"/docProps/custom.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.custom-properties+xml\"/>\n";
+            }
         }
 
         if (pimpl->next_footnote_id > 1) {
@@ -364,6 +417,10 @@ bool Document::save(gsl::czstring filepath) {
             "  <Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>\n";
         if (pimpl->has_metadata) {
             root_rels += "  <Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties\" Target=\"docProps/core.xml\"/>\n";
+            root_rels += "  <Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties\" Target=\"docProps/app.xml\"/>\n";
+            if (!pimpl->metadata.customProperties.empty()) {
+                root_rels += "  <Relationship Id=\"rId4\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties\" Target=\"docProps/custom.xml\"/>\n";
+            }
         }
         root_rels += "</Relationships>";
         zip_file_add(z, "_rels/.rels", zip_source_buffer(z, root_rels.data(), root_rels.size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);

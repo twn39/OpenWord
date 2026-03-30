@@ -508,6 +508,40 @@ void test_watermark_and_toc() {
     fmt::print("");
 }
 
+void test_metadata_advanced() {
+    openword::Document doc;
+    
+    openword::Metadata meta;
+    
+    // Core Properties (Summary tab)
+    meta.title = "OpenWord Metadata Demo";
+    meta.author = "Dr. Antigravity";
+    meta.subject = "C++ DOCX Generation";
+    meta.keywords = "C++, OOXML, Library, High Performance";
+    meta.comments = "This document demonstrates the injection of Core, App, and Custom metadata properties.";
+    meta.lastModifiedBy = "Automated System";
+    meta.category = "Technical Report";
+    
+    // Extended Properties (Content/Summary tab)
+    meta.company = "OpenSource Innovations Ltd.";
+    meta.manager = "Jane Doe";
+    meta.hyperlinkBase = "https://github.com/openword";
+    
+    // Custom Properties (Custom tab)
+    meta.customProperties["ApprovalStatus"] = openword::CustomProperty{openword::CustomProperty::Type::Text, "Approved"};
+    meta.customProperties["RevisionVersion"] = openword::CustomProperty{openword::CustomProperty::Type::Integer, "42"};
+    meta.customProperties["IsDraft"] = openword::CustomProperty{openword::CustomProperty::Type::Boolean, "false"};
+    meta.customProperties["ConfidenceScore"] = openword::CustomProperty{openword::CustomProperty::Type::Double, "99.99"};
+    meta.customProperties["PublishDate"] = openword::CustomProperty{openword::CustomProperty::Type::Date, "2026-03-30T10:00:00Z"};
+    
+    doc.setMetadata(meta);
+    
+    doc.addParagraph("This document is filled with advanced metadata. Right click the generated docx file and view its properties/details in Word!").setStyle("Heading1");
+
+    doc.save("test_21_advanced_metadata.docx");
+    fmt::print("- test_21_advanced_metadata.docx (Core, App, and Custom Metadata Properties)\n");
+}
+
 int main() {
     fmt::print("Generating capability test files...\n");
     test_basic_text();
@@ -529,9 +563,9 @@ int main() {
     test_p1_features();
     test_p2_features();
     test_watermark_and_toc();
+    test_metadata_advanced();
 
-    test_watermark_and_toc();
-    fmt::print("\nDone! Please verify test_20_watermark_toc.docx for the background watermark.\n");
+    fmt::print("\nDone! Please verify test_20_watermark_toc.docx and test_21_advanced_metadata.docx.\n");
     return 0;
 }
 

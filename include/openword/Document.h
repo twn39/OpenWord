@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <map>
 #include <variant>
 #include <gsl/gsl>
 
@@ -83,12 +84,29 @@ struct BorderSettings {
 enum class VerticalAlignment { Top, Center, Bottom };
 enum class HeightRule { Auto, AtLeast, Exact };
 
+struct CustomProperty {
+    enum class Type { Text, Integer, Boolean, Double, Date };
+    Type type;
+    std::string value; // String representation
+};
+
 struct Metadata {
+    // --- Core Properties (Summary tab) ---
     std::string title;
-    std::string author;
     std::string subject;
+    std::string author; // Creator
+    std::string keywords;
+    std::string comments; // Description
+    std::string lastModifiedBy;
+    std::string category;
+    
+    // --- Extended Properties (Summary/Content tab) ---
     std::string company;
-    std::string creation_time; // ISO8601
+    std::string manager;
+    std::string hyperlinkBase;
+    
+    // --- Custom Properties (Custom tab) ---
+    std::map<std::string, CustomProperty> customProperties;
 };
 
 
