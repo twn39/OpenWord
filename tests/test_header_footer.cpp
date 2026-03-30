@@ -53,6 +53,7 @@ TEST_CASE("Headers, Footers, and Page Numbers", "[layout]") {
         std::string last_sect = doc_xml.substr(last_sect_pos);
         
         // Header reference should NOT be present in sec2
+        // Header reference should NOT be present in sec2 (finalSectPr)
         REQUIRE(last_sect.find("w:headerReference") == std::string::npos);
         
         
