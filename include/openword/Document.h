@@ -10,6 +10,14 @@ namespace openword {
 
 class Paragraph;
 class Table;
+
+enum class TOCLeader {
+    Dot,
+    Hyphen,
+    Underscore,
+    None
+};
+
 class Section;
 
 using BlockElement = std::variant<Paragraph, Table, Section>;
@@ -235,6 +243,7 @@ public:
     explicit Paragraph(void* node); // Internal use
     
     Run addRun(const std::string& text = "");
+    void addRawXml(const std::string& xml);
     
     /**
      * @brief Adds an image to the paragraph.
@@ -446,7 +455,8 @@ public:
     void setMetadata(const Metadata& meta);
     Metadata metadata() const;
 
-    void addTableOfContents(gsl::czstring title = "Table of Contents", int max_levels = 3);
+    void addTableOfContents(gsl::czstring title = "Table of Contents", int max_levels = 3, TOCLeader leader = TOCLeader::Dot);
+    void addWatermark(const std::string& text);
     
     int createFootnote(const std::string& text);
     int createEndnote(const std::string& text);

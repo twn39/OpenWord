@@ -433,7 +433,7 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
         REQUIRE(doc_xml.find("w:sdt") != std::string::npos);
         REQUIRE(doc_xml.find("w:instrText") != std::string::npos);
-        REQUIRE(doc_xml.find("TOC \\o") != std::string::npos);
+        REQUIRE(doc_xml.find(R"(TOC \o "1-3" \h \z \u)") != std::string::npos);
         REQUIRE(doc_xml.find("w:outlineLvl w:val=\"0\"") != std::string::npos);
         REQUIRE(doc_xml.find("w:outlineLvl w:val=\"1\"") != std::string::npos);
 
@@ -800,6 +800,64 @@ TEST_CASE("Advanced Document Features Validation", "[advanced]") {
         REQUIRE(t.row(0).text() == "Header Col 1 Header Col 2");
         REQUIRE(t.row(1).text() == "Data Col 1 Data Col 2");
         
+        std::filesystem::remove(filename);
+    }
+
+    SECTION("Inject global watermark and custom TOC schemas") {
+        doc.addWatermark("CONFIDENTIAL TEST");
+        doc.addTableOfContents("My Custom TOC", 3, openword::TOCLeader::Hyphen);
+        
+        std::string filename = "test_adv_watermark_toc.docx";
+        REQUIRE(doc.save(filename.c_str()) == true);
+        
+        std::string doc_xml = extract_file_from_zip(filename, "word/document.xml");
+        
+        // 1. AST Structural Verification for TOC
+        pugi::xml_document xml_doc;
+        REQUIRE(xml_doc.load_string(doc_xml.c_str()));
+        auto body = xml_doc.child("w:document").child("w:body");
+        
+        // Find TOC block by looking for SDT
+        auto sdt = body.child("w:sdt");
+        REQUIRE(sdt);
+        REQUIRE(std::string(sdt.child("w:sdtPr").child("w:docPartObj").child("w:docPartGallery").attribute("w:val").value()) == "Table of Contents");
+        
+        // Verify TOC instruction contains the hyphen switch
+        REQUIRE(doc_xml.find(R"(TOC \o "1-3" \h \z \u \p "-")") != std::string::npos);
+        
+        // 2. OOXML & Content Validation for Watermark in Header
+        std::string header_xml = extract_file_from_zip(filename, "word/header100.xml");
+        REQUIRE_FALSE(header_xml.empty());
+        
+        pugi::xml_document hdr_doc;
+        REQUIRE(hdr_doc.load_string(header_xml.c_str()));
+        
+        auto hdr_root = hdr_doc.child("w:hdr");
+        REQUIRE(hdr_root);
+        
+        // Verify VML namespace propagation in root
+        REQUIRE(std::string(hdr_root.attribute("xmlns:v").value()) == "urn:schemas-microsoft-com:vml");
+        REQUIRE(std::string(hdr_root.attribute("xmlns:o").value()) == "urn:schemas-microsoft-com:office:office");
+        
+        // Verify Shape structure
+        auto pict = hdr_root.child("w:p").child("w:r").child("w:pict");
+        REQUIRE(pict);
+        auto shape = pict.child("v:shape");
+        REQUIRE(shape);
+        
+        // Verify watermark critical CSS styling
+        std::string style_str = shape.attribute("style").value();
+        REQUIRE(style_str.find("position:absolute") != std::string::npos);
+        REQUIRE(style_str.find("rotation:315") != std::string::npos);
+        REQUIRE(style_str.find("z-index:-251658240") != std::string::npos); // Verify behind text layer
+        
+        // Verify exact content
+        REQUIRE(std::string(shape.child("v:textpath").attribute("string").value()) == "CONFIDENTIAL TEST");
+        
+        // Verify crucial path & formulas exist for Word fallback renderer
+        REQUIRE(pict.child("v:shapetype").child("v:formulas"));
+        REQUIRE(pict.child("v:shapetype").child("v:handles"));
+
         std::filesystem::remove(filename);
     }
 

@@ -436,7 +436,7 @@ NumberingCollection Document::numbering() {
     return NumberingCollection(pimpl->numbering_doc.child("w:numbering").internal_object());
 }
 
-void Document::addTableOfContents(gsl::czstring title, int max_levels) {
+void Document::addTableOfContents(gsl::czstring title, int max_levels, TOCLeader leader) {
     pimpl->needs_update_fields = true;
     auto sectPr = pimpl->body.child("w:sectPr");
     
@@ -464,7 +464,14 @@ void Document::addTableOfContents(gsl::czstring title, int max_levels) {
     auto r2 = p1.append_child("w:r");
     auto instr = r2.append_child("w:instrText");
     instr.append_attribute("xml:space") = "preserve";
-    std::string instrVal = fmt::format(R"(TOC \o "1-{}" \h \z \u)", max_levels);
+    
+    std::string leaderChar = "";
+    if (leader == TOCLeader::Hyphen) leaderChar = " \\p \"-\"";
+    else if (leader == TOCLeader::Underscore) leaderChar = " \\p \"_\"";
+    else if (leader == TOCLeader::None) leaderChar = " \\p \" \"";
+    // default dot doesn't need explicit \p switch
+    
+    std::string instrVal = fmt::format(R"(TOC \o "1-{}" \h \z \u{})", max_levels, leaderChar);
     instr.text().set(instrVal.c_str());
     
     auto r3 = p1.append_child("w:r");
@@ -572,6 +579,55 @@ std::vector<BlockElement> Document::elements() const {
         }
     }
     return result;
+}
+
+
+void Document::addWatermark(const std::string& text) {
+    if (text.empty()) return;
+    
+    auto sec = finalSection();
+    auto header = sec.addHeader(HeaderFooterType::Default);
+    auto p = header.addParagraph();
+    
+    // We do NOT modify paragraph spacing or size. We leave it as a normal header paragraph.
+    // The previous attempt to hide it with spacing=0 probably caused Word to clip or ignore the VML shape entirely.
+    
+    std::string vmlStr = fmt::format(R"(
+        <w:r>
+            <w:pict>
+                <v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e">
+                    <v:formulas>
+                        <v:f eqn="sum #0 0 10800"/>
+                        <v:f eqn="prod #0 2 1"/>
+                        <v:f eqn="sum 21600 0 @1"/>
+                        <v:f eqn="sum 0 0 @2"/>
+                        <v:f eqn="sum 21600 0 @3"/>
+                        <v:f eqn="if @0 @3 0"/>
+                        <v:f eqn="if @0 21600 @1"/>
+                        <v:f eqn="if @0 0 @2"/>
+                        <v:f eqn="if @0 @4 21600"/>
+                        <v:f eqn="mid @5 @6"/>
+                        <v:f eqn="mid @8 @5"/>
+                        <v:f eqn="mid @7 @8"/>
+                        <v:f eqn="mid @6 @7"/>
+                        <v:f eqn="sum @6 0 @5"/>
+                    </v:formulas>
+                    <v:path textpathok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0"/>
+                    <v:textpath on="t" fitshape="t"/>
+                    <v:handles>
+                        <v:h position="#0,bottomRight" xrange="6629,14971"/>
+                    </v:handles>
+                    <o:lock v:ext="edit" text="t" shapetype="t"/>
+                </v:shapetype>
+                <v:shape id="PowerPlusWaterMarkObject357" o:spid="_x0000_s102" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:415pt;height:90pt;rotation:315;z-index:-251658240;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" fillcolor="#c0c0c0" stroked="f">
+                    <v:fill opacity="0.5"/>
+                    <v:textpath style="font-family:'Calibri';font-size:1pt" string="{}"/>
+                </v:shape>
+            </w:pict>
+        </w:r>
+    )", text);
+    
+    p.addRawXml(vmlStr);
 }
 
 } // namespace openword

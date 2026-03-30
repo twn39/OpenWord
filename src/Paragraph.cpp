@@ -759,4 +759,17 @@ int Paragraph::listLevel() const {
     return 0;
 }
 
+
+void Paragraph::addRawXml(const std::string& xml) {
+    if (xml.empty()) return;
+    auto n = cast_node(node_);
+    
+    pugi::xml_document doc;
+    if (doc.load_string(xml.c_str())) {
+        for (auto child : doc.children()) {
+            n.append_copy(child);
+        }
+    }
+}
+
 } // namespace openword

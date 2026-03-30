@@ -464,6 +464,50 @@ void test_p2_features() {
     fmt::print("- test_19_p2_features.docx (Highlights & Advanced Table Rules)\n");
 }
 
+void test_watermark_and_toc() {
+    openword::Document doc;
+    
+    // 1. Watermark
+    doc.addWatermark("CONFIDENTIAL");
+    
+    // 2. Custom TOC
+    doc.addTableOfContents("My Custom TOC", 3, openword::TOCLeader::None);
+    
+    // --- Page 1 ---
+    doc.addParagraph().addRun("This document contains a giant background watermark generated purely with VML shapes. No external images are required!");
+    
+    auto p1 = doc.addParagraph();
+    p1.setStyle("Heading1");
+    p1.addRun("Chapter 1: The First Steps");
+    
+    doc.addParagraph("This is some introductory text for chapter 1. The watermark should be visible behind all this text.");
+    
+    auto p2 = doc.addParagraph();
+    p2.setStyle("Heading2");
+    p2.addRun("Subchapter 1.1: Details");
+    
+    doc.addParagraph("Here are some details. Now let's push some content to the next page to see how the TOC handles page numbers.");
+    
+    // Push to next page using a bunch of paragraphs
+    for(int i=0; i<30; i++) doc.addParagraph("Filler text to trigger pagination...");
+    
+    // --- Page 2 ---
+    auto p3 = doc.addParagraph();
+    p3.setStyle("Heading1");
+    p3.addRun("Chapter 2: The Next Horizon");
+    
+    doc.addParagraph("We are now on page 2. The watermark should repeat here automatically because it's in the header!");
+    
+    auto p4 = doc.addParagraph();
+    p4.setStyle("Heading2");
+    p4.addRun("Subchapter 2.1: Advanced Watermarks");
+    
+    doc.addParagraph("Notice how the TOC generated at the beginning points to page 2 for this section.");
+    
+    doc.save("test_20_watermark_toc.docx");
+    fmt::print("");
+}
+
 int main() {
     fmt::print("Generating capability test files...\n");
     test_basic_text();
@@ -484,8 +528,10 @@ int main() {
     test_resource_pool();
     test_p1_features();
     test_p2_features();
+    test_watermark_and_toc();
 
-    fmt::print("\nDone! Please verify test_05_tables.docx for the new advanced table layout.\n");
+    test_watermark_and_toc();
+    fmt::print("\nDone! Please verify test_20_watermark_toc.docx for the background watermark.\n");
     return 0;
 }
 
