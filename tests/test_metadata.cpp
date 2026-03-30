@@ -47,6 +47,9 @@ TEST_CASE("Metadata and Custom Properties parsing", "[metadata]") {
         REQUIRE(app_xml.find("<Company>Tech Corp</Company>") != std::string::npos);
         REQUIRE(app_xml.find("<Manager>Boss</Manager>") != std::string::npos);
         REQUIRE(app_xml.find("<HyperlinkBase>https://example.com</HyperlinkBase>") != std::string::npos);
+        REQUIRE(app_xml.find("<HeadingPairs>") != std::string::npos);
+        REQUIRE(app_xml.find("<TitlesOfParts>") != std::string::npos);
+        REQUIRE(app_xml.find("<vt:lpstr>AST Parser Design</vt:lpstr>") != std::string::npos);
     }
     
     SECTION("Custom Properties") {

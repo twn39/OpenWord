@@ -240,7 +240,16 @@ bool Document::save(gsl::czstring filepath) {
             std::string app_props = 
                 "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
                 "<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" "
-                "xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">\n";
+                "xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">\n"
+                "  <Application>OpenWord C++</Application>\n"
+                "  <DocSecurity>0</DocSecurity>\n"
+                "  <ScaleCrop>false</ScaleCrop>\n"
+                "  <HeadingPairs><vt:vector size=\"2\" baseType=\"variant\"><vt:variant><vt:lpstr>Title</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs>\n"
+                "  <TitlesOfParts><vt:vector size=\"1\" baseType=\"lpstr\"><vt:lpstr>" + (pimpl->metadata.title.empty() ? "Document" : pimpl->metadata.title) + "</vt:lpstr></vt:vector></TitlesOfParts>\n"
+                "  <LinksUpToDate>false</LinksUpToDate>\n"
+                "  <SharedDoc>false</SharedDoc>\n"
+                "  <HyperlinksChanged>false</HyperlinksChanged>\n"
+                "  <AppVersion>16.0000</AppVersion>\n";
             
             if (!pimpl->metadata.company.empty()) app_props += fmt::format("  <Company>{}</Company>\n", pimpl->metadata.company);
             if (!pimpl->metadata.manager.empty()) app_props += fmt::format("  <Manager>{}</Manager>\n", pimpl->metadata.manager);
@@ -260,7 +269,7 @@ bool Document::save(gsl::czstring filepath) {
                 
                 int pid = 2;
                 for (const auto& [name, prop] : pimpl->metadata.customProperties) {
-                    custom_props += fmt::format("  <property fmtid=\"{{000000D5-0000-0000-C000-000000000046}}\" pid=\"{}\" name=\"{}\">\n", pid++, name);
+                    custom_props += fmt::format("  <property fmtid=\"{{D5CDD505-2E9C-101B-9397-08002B2CF9AE}}\" pid=\"{}\" name=\"{}\">\n", pid++, name);
                     
                     if (prop.type == CustomProperty::Type::Text) {
                         custom_props += fmt::format("    <vt:lpwstr>{}</vt:lpwstr>\n", prop.value);

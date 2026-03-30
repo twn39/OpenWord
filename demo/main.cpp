@@ -537,6 +537,9 @@ void test_metadata_advanced() {
     doc.setMetadata(meta);
     
     doc.addParagraph("This document is filled with advanced metadata. Right click the generated docx file and view its properties/details in Word!").setStyle("Heading1");
+    doc.addParagraph("Check the 'Content' tab to see document structure representation.");
+    doc.addParagraph("Chapter 1: Introduction").setStyle("Heading2");
+    doc.addParagraph("More details here...");
 
     doc.save("test_21_advanced_metadata.docx");
     fmt::print("- test_21_advanced_metadata.docx (Core, App, and Custom Metadata Properties)\n");
