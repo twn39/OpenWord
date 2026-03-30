@@ -38,6 +38,10 @@ struct Document::Impl {
     pugi::xml_node endnotes_root;
     int next_endnote_id = 1;
     
+    pugi::xml_document comments_doc;
+    pugi::xml_node comments_root;
+    int next_comment_id = 0;
+    
     bool needs_update_fields = false;
 
     void initialize() {
@@ -97,6 +101,13 @@ struct Document::Impl {
         e_decl.append_attribute("standalone") = "yes";
         endnotes_root = endnotes_doc.append_child("w:endnotes");
         endnotes_root.append_attribute("xmlns:w") = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        
+        auto c_decl = comments_doc.append_child(pugi::node_declaration);
+        c_decl.append_attribute("version") = "1.0";
+        c_decl.append_attribute("encoding") = "UTF-8";
+        c_decl.append_attribute("standalone") = "yes";
+        comments_root = comments_doc.append_child("w:comments");
+        comments_root.append_attribute("xmlns:w") = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     }
 };
 
@@ -309,6 +320,15 @@ bool Document::save(gsl::czstring filepath) {
             zip_file_add(z, "word/endnotes.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes", "endnotes.xml");
             ct += "  <Override PartName=\"/word/endnotes.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml\"/>\n";
+        }
+
+        if (pimpl->next_comment_id > 0) {
+            std::stringstream cs;
+            pimpl->comments_doc.save(cs, "", pugi::format_raw);
+            zip_buffers.push_back(cs.str());
+            zip_file_add(z, "word/comments.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0), ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            pimpl->doc_rels.addRelationship("http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments", "comments.xml");
+            ct += "  <Override PartName=\"/word/comments.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/>\n";
         }
 
         auto links_store = pimpl->doc.child("w:document").child("openword_hyperlinks");
@@ -698,3 +718,24 @@ void Document::addWatermark(const std::string& text) {
 
 } // namespace openword
 
+
+
+int openword::Document::createComment(const std::string& text, const std::string& author, const std::string& initials) {
+    int id = pimpl->next_comment_id++;
+    auto cmt = pimpl->comments_root.append_child("w:comment");
+    cmt.append_attribute("w:id") = std::to_string(id).c_str();
+    if (!author.empty()) cmt.append_attribute("w:author") = author.c_str();
+    if (!initials.empty()) cmt.append_attribute("w:initials") = initials.c_str();
+    
+    // Add current time in UTC using standard library formatting (if available) or rely on Word interpreting missing time. Let's omit date for simplicity and testing consistency.
+    
+    auto p = cmt.append_child("w:p");
+    auto pPr = p.append_child("w:pPr");
+    pPr.append_child("w:pStyle").append_attribute("w:val") = "CommentText";
+    auto r1 = p.append_child("w:r");
+    r1.append_child("w:rPr").append_child("w:rStyle").append_attribute("w:val") = "CommentReference";
+    r1.append_child("w:annotationRef"); // OOXML requirement for comments
+    auto r2 = p.append_child("w:r");
+    r2.append_child("w:t").text().set(text.c_str());
+    return id;
+}

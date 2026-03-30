@@ -234,6 +234,7 @@ public:
     Run& setVertAlign(VertAlign align);
     Run& setHighlight(HighlightColor color);
     Run& setCharacterSpacing(int twips);
+    Run& addComment(int commentId);
     
     // --- Backgrounds ---
     Run& setHighlight(gsl::czstring color); // e.g. "yellow", "cyan"
@@ -477,6 +478,7 @@ public:
     void addWatermark(const std::string& text);
     
     int createFootnote(const std::string& text);
+    int createComment(const std::string& text, const std::string& author = "Author", const std::string& initials = "");
     int createEndnote(const std::string& text);
     
     StyleCollection styles();

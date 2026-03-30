@@ -264,3 +264,25 @@ HighlightColor Run::highlightColor() const {
 }
 
 } // namespace openword
+
+openword::Run& openword::Run::addComment(int commentId) {
+    auto n = cast_node(node_);
+    auto parent = n.parent();
+    
+    std::string id_str = std::to_string(commentId);
+    
+    // Insert w:commentRangeStart BEFORE this Run
+    auto startNode = parent.insert_child_before("w:commentRangeStart", n);
+    startNode.append_attribute("w:id") = id_str.c_str();
+    
+    // Insert w:commentRangeEnd AFTER this Run
+    auto endNode = parent.insert_child_after("w:commentRangeEnd", n);
+    endNode.append_attribute("w:id") = id_str.c_str();
+    
+    // Insert the reference tag w:commentReference immediately after the RangeEnd
+    auto refRun = parent.insert_child_after("w:r", endNode);
+    refRun.append_child("w:rPr").append_child("w:rStyle").append_attribute("w:val") = "CommentReference";
+    refRun.append_child("w:commentReference").append_attribute("w:id") = id_str.c_str();
+    
+    return *this;
+}

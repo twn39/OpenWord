@@ -508,6 +508,20 @@ void test_watermark_and_toc() {
     fmt::print("");
 }
 
+void test_comments() {
+    openword::Document doc;
+    int cid = doc.createComment("This is a test comment from OpenWord! The fluent API makes it super easy to attach.", "Dr. Developer", "DD");
+    auto p = doc.addParagraph("This is some regular text, and ");
+    p.addRun("here is the text with a comment attached").addComment(cid);
+    p.addRun(". And here is more normal text.");
+    
+    int cid2 = doc.createComment("Another note.");
+    p.addRun(" You can attach multiple comments!").addComment(cid2);
+    
+    doc.save("test_22_comments.docx");
+    fmt::print("- test_22_comments.docx (Comments)\n");
+}
+
 void test_metadata_advanced() {
     openword::Document doc;
     
@@ -567,6 +581,7 @@ int main() {
     test_p2_features();
     test_watermark_and_toc();
     test_metadata_advanced();
+    test_comments();
 
     fmt::print("\nDone! Please verify test_20_watermark_toc.docx and test_21_advanced_metadata.docx.\n");
     return 0;
