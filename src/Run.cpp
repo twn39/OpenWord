@@ -286,3 +286,16 @@ openword::Run& openword::Run::addComment(int commentId) {
     
     return *this;
 }
+
+openword::Run& openword::Run::addLineBreak() {
+    auto n = cast_node(node_);
+    n.append_child("w:br");
+    return *this;
+}
+
+openword::Run& openword::Run::addPageBreak() {
+    auto n = cast_node(node_);
+    auto br = n.append_child("w:br");
+    br.append_attribute("w:type") = "page";
+    return *this;
+}

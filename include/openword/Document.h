@@ -252,6 +252,10 @@ public:
     Run& setHighlight(HighlightColor color);
     Run& setCharacterSpacing(int twips);
     Run& addComment(int commentId);
+
+    // --- Breaks ---
+    Run& addLineBreak();
+    Run& addPageBreak();
     
     // --- Backgrounds ---
     Run& setHighlight(gsl::czstring color); // e.g. "yellow", "cyan"

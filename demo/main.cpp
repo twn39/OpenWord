@@ -570,6 +570,27 @@ void test_nested_table() {
 }
 
 
+void test_breaks() {
+    openword::Document doc;
+    
+    // Line Breaks
+    auto p1 = doc.addParagraph();
+    p1.addRun("First Line");
+    p1.addRun().addLineBreak(); // Soft return
+    p1.addRun("Second Line within the same paragraph");
+    p1.addRun().addLineBreak().addLineBreak();
+    p1.addRun("Fourth Line");
+
+    // Page Break
+    auto p2 = doc.addParagraph("This is the last sentence on page 1.");
+    p2.addRun().addPageBreak();
+    
+    doc.addParagraph("This sentence starts exactly on page 2.");
+    
+    doc.save("test_24_breaks.docx");
+    fmt::print("- test_24_breaks.docx (Line and Page Breaks)\n");
+}
+
 void test_metadata_advanced() {
     openword::Document doc;
     
@@ -631,6 +652,7 @@ int main() {
     test_metadata_advanced();
     test_comments();
     test_nested_table();
+    test_breaks();
 
     fmt::print("\nDone! Please verify test_20_watermark_toc.docx and test_21_advanced_metadata.docx.\n");
     return 0;
