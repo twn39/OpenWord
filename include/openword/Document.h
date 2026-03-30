@@ -156,6 +156,11 @@ private:
 class StyleCollection {
 public:
     explicit StyleCollection(void* node);
+    
+    // Default document properties (w:docDefaults)
+    Font getDefaultFont();
+    ParagraphFormat getDefaultParagraphFormat();
+    
     Style get(const std::string& styleId);
     Style add(const std::string& styleId, const std::string& type = "paragraph");
 private:

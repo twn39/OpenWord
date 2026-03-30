@@ -45,4 +45,25 @@ TEST_CASE("Advanced Styles Generation", "[styles]") {
     }
     
     std::filesystem::remove(filename);
+
+    SECTION("DocDefaults Modification") {
+        doc.styles().getDefaultFont().setSize(36).setName("Arial");
+        doc.styles().getDefaultParagraphFormat().setSpacing(360, 360);
+        
+        std::string filename_defaults = "test_adv_defaults.docx";
+        REQUIRE(doc.save(filename_defaults.c_str()) == true);
+        
+        std::string styles_xml = extract_file_from_zip(filename_defaults, "word/styles.xml");
+        REQUIRE(styles_xml.find("<w:docDefaults>") != std::string::npos);
+        REQUIRE(styles_xml.find("<w:rPrDefault>") != std::string::npos);
+        REQUIRE(styles_xml.find("<w:sz w:val=\"36\"/>") != std::string::npos);
+        REQUIRE(styles_xml.find("w:ascii=\"Arial\"") != std::string::npos);
+        REQUIRE(styles_xml.find("w:hAnsi=\"Arial\"") != std::string::npos);
+        REQUIRE(styles_xml.find("<w:pPrDefault>") != std::string::npos);
+        REQUIRE(styles_xml.find("w:before=\"360\"") != std::string::npos);
+        REQUIRE(styles_xml.find("w:after=\"360\"") != std::string::npos);
+        
+        std::filesystem::remove(filename_defaults);
+    }
+
 }

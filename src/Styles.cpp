@@ -182,6 +182,34 @@ Style& Style::setHidden(bool isHidden) {
 
 StyleCollection::StyleCollection(void* node) : node_(node) {}
 
+Font StyleCollection::getDefaultFont() {
+    auto n = cast_node(node_);
+    auto docDefaults = n.child("w:docDefaults");
+    if (!docDefaults) docDefaults = n.prepend_child("w:docDefaults");
+    
+    auto rPrDefault = docDefaults.child("w:rPrDefault");
+    if (!rPrDefault) rPrDefault = docDefaults.append_child("w:rPrDefault");
+    
+    auto rPr = rPrDefault.child("w:rPr");
+    if (!rPr) rPr = rPrDefault.append_child("w:rPr");
+    
+    return Font(rPr.internal_object());
+}
+
+ParagraphFormat StyleCollection::getDefaultParagraphFormat() {
+    auto n = cast_node(node_);
+    auto docDefaults = n.child("w:docDefaults");
+    if (!docDefaults) docDefaults = n.prepend_child("w:docDefaults");
+    
+    auto pPrDefault = docDefaults.child("w:pPrDefault");
+    if (!pPrDefault) pPrDefault = docDefaults.append_child("w:pPrDefault");
+    
+    auto pPr = pPrDefault.child("w:pPr");
+    if (!pPr) pPr = pPrDefault.append_child("w:pPr");
+    
+    return ParagraphFormat(pPr.internal_object());
+}
+
 Style StyleCollection::get(const std::string& styleId) {
     auto n = cast_node(node_);
     for (auto style : n.children("w:style")) {

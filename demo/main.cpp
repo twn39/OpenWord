@@ -52,6 +52,13 @@ void test_styles() {
     
     auto p3 = doc.addParagraph("Because 'Next Style' is Normal, if you open this doc in Word, put the cursor at the end of the blue text above, and press Enter, this new paragraph will automatically revert to Normal text.");
     
+
+    // 3. Document Defaults Override (docDefaults)
+    doc.styles().getDefaultFont().setSize(28).setName("Arial").setColor("333333");
+    doc.styles().getDefaultParagraphFormat().setSpacing(360, 360);
+    
+    auto p4 = doc.addParagraph("This paragraph has NO style applied directly to it. However, because we modified the Global Document Defaults (docDefaults), it uses 14pt Arial Dark Gray with large spacing instead of the standard 11pt Calibri.");
+
     doc.save("test_03_styles.docx");
     fmt::print("- test_03_styles.docx (Styles)\n");
 }
