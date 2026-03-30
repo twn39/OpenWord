@@ -53,6 +53,7 @@ jobs:
         -DCMAKE_CXX_STANDARD=${{ matrix.cpp_std }} 
         -DCMAKE_BUILD_TYPE=Release 
         ${{ runner.os == 'Windows' && format('-DCMAKE_TOOLCHAIN_FILE={0}/scripts/buildsystems/vcpkg.cmake', env.VCPKG_INSTALLATION_ROOT) || '' }}
+        ${{ runner.os == 'macOS' && '-DLibXml2_ROOT=$(brew --prefix libxml2) -DLibXslt_ROOT=$(brew --prefix libxslt)' || '' }}
 
     - name: Build C++ Library and Executables
       run: cmake --build build --config Release -j 4
