@@ -10,11 +10,12 @@ namespace openword {
 static std::pair<int, int> getImageSize(const std::string &path) {
     std::ifstream file;
     open_ifstream(file, path, std::ios::binary);
-    if (!file.is_open())
+    if (!file.is_open()) {
         return {0, 0};
+}
 
-    unsigned char buf[24];
-    if (file.read(reinterpret_cast<char *>(buf), 24)) {
+    std::array<unsigned char, 24> buf;
+    if (file.read(reinterpret_cast<char *>(buf.data()), 24)) {
         // Check PNG
         if (buf[0] == 0x89 && buf[1] == 0x50 && buf[2] == 0x4E && buf[3] == 0x47) {
             int w = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
@@ -27,11 +28,13 @@ static std::pair<int, int> getImageSize(const std::string &path) {
             file.seekg(2, std::ios::beg);
             while (true) {
                 int marker = file.get();
-                if (marker != 0xFF)
+                if (marker != 0xFF) {
                     break;
+}
                 int type = file.get();
-                if (type == EOF || file.eof())
+                if (type == EOF || file.eof()) {
                     break;
+}
 
                 int len_hi = file.get();
                 int len_lo = file.get();
@@ -632,8 +635,9 @@ Table Paragraph::insertTableAfter(int rows, int cols) {
 
 static void applyParaBorder(pugi::xml_node borders, const char *borderName, const BorderSettings &bs) {
     auto b = borders.child(borderName);
-    if (!b)
+    if (!b) {
         b = borders.append_child(borderName);
+}
 
     // We must manually duplicate the logic here or share it.
     // The previous applyBorder function is static inside Table.cpp.

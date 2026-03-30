@@ -31,11 +31,12 @@ struct xml_string_writer : pugi::xml_writer {
  */
 std::string sanitize_mathml(const std::string &input) {
     pugi::xml_document doc;
-    if (!doc.load_string(input.c_str()))
+    if (!doc.load_string(input.c_str())) {
         return input;
+}
 
     // 1. Remove all mspace and layout hints that often break conversion
-    const char *unwanted[] = {"mspace", "maction", "merror", "mphantom", "mpath"};
+    std::array<const char*, 5> unwanted = {"mspace", "maction", "merror", "mphantom", "mpath"};
     for (const char *name : unwanted) {
         auto matches = doc.select_nodes((std::string("//*[local-name()='") + name + "']").c_str());
         for (auto m : matches)
@@ -54,8 +55,9 @@ std::string sanitize_mathml(const std::string &input) {
     doc.traverse(walker);
 
     auto math = doc.child("mml:math");
-    if (math)
+    if (math) {
         math.append_attribute("xmlns:mml") = "http://www.w3.org/1998/Math/MathML";
+}
 
     xml_string_writer writer;
     doc.save(writer, "", pugi::format_raw);
@@ -63,15 +65,17 @@ std::string sanitize_mathml(const std::string &input) {
 
     auto remove_all = [&](const std::string &target) {
         size_t pos = 0;
-        while ((pos = str.find(target, pos)) != std::string::npos)
+        while ((pos = str.find(target, pos)) != std::string::npos) {
             str.erase(pos, target.length());
+}
     };
 
     const char *invisible_seqs[] = {"\xE2\x81\xA1",    "\xE2\x81\xA2",    "\xE2\x81\xA3", "\xE2\x81\xA4",
                                     "&#x2061;",        "&#x2062;",        "&#x2063;",     "&#x2064;",
                                     "&ApplyFunction;", "&InvisibleTimes;"};
-    for (const char *seq : invisible_seqs)
+    for (const char *seq : invisible_seqs) {
         remove_all(seq);
+}
 
     return str;
 }
@@ -90,7 +94,7 @@ void process_omml_node(pugi::xml_node node) {
         auto e = node.child("m:e");
         if (e && !e.first_child()) {
             pugi::xml_node sib = node.next_sibling();
-            while (sib) {
+            while (sib) { // NOLINT(bugprone-infinite-loop)
                 pugi::xml_node next = sib.next_sibling();
                 // Move mathematical elements into the base
                 if (sib.type() == pugi::node_element ||
@@ -110,8 +114,9 @@ void process_omml_node(pugi::xml_node node) {
         if (!t || std::string(t.child_value()).empty()) {
             pugi::xml_node next = node.next_sibling();
             node.parent().remove_child(node);
-            if (next)
+            if (next) {
                 process_omml_node(next);
+}
             return;
         }
     }
@@ -131,7 +136,7 @@ void process_omml_node(pugi::xml_node node) {
         node.append_child("m:r").append_child("m:t").set_value("\xE2\x80\x8B"); // ZWSP
     }
 
-    for (pugi::xml_node child = node.first_child(); child;) {
+    for (pugi::xml_node child = node.first_child(); child;) { // NOLINT(bugprone-infinite-loop)
         pugi::xml_node next = child.next_sibling();
         process_omml_node(child);
         child = next;
@@ -140,8 +145,9 @@ void process_omml_node(pugi::xml_node node) {
 
 std::string sanitize_omml(const std::string &raw_omml) {
     pugi::xml_document doc;
-    if (!doc.load_string(raw_omml.c_str()))
+    if (!doc.load_string(raw_omml.c_str())) {
         return raw_omml;
+}
     process_omml_node(doc.root());
     xml_string_writer writer;
     doc.save(writer, "", pugi::format_raw);
@@ -152,25 +158,29 @@ std::string apply_xslt_transformation(const std::string &raw_mathml) {
     std::string mathml = sanitize_mathml(raw_mathml);
 
     xsltStylesheetPtr cur = xsltParseStylesheetFile((const xmlChar *)"resources/MML2OMML.XSL");
-    if (!cur)
+    if (!cur) {
         return "";
+}
     auto cleanup_xslt = gsl::finally([cur]() { xsltFreeStylesheet(cur); });
 
     xmlDocPtr xml_doc = xmlReadMemory(mathml.c_str(), static_cast<int>(mathml.length()), nullptr, nullptr, 0);
-    if (!xml_doc)
+    if (!xml_doc) {
         return "";
+}
     auto cleanup_doc = gsl::finally([xml_doc]() { xmlFreeDoc(xml_doc); });
 
     xmlDocPtr res = xsltApplyStylesheet(cur, xml_doc, nullptr);
-    if (!res)
+    if (!res) {
         return "";
+}
     auto cleanup_res = gsl::finally([res]() { xmlFreeDoc(res); });
 
     xmlChar *xml_res = nullptr;
     int len = 0;
     xsltSaveResultToString(&xml_res, &len, res, cur);
-    if (!xml_res)
+    if (!xml_res) {
         return "";
+}
 
     std::string omml_str(reinterpret_cast<char *>(xml_res), len);
     xmlFree(xml_res);
@@ -181,8 +191,9 @@ std::string apply_xslt_transformation(const std::string &raw_mathml) {
 
 std::string convert_latex_to_omml(const std::string &latex) {
     char *raw_mathml = latex_to_mathml_c(latex.c_str());
-    if (!raw_mathml)
+    if (!raw_mathml) {
         return "";
+}
     auto cleanup_rust = gsl::finally([raw_mathml]() { free_rust_string(raw_mathml); });
     return apply_xslt_transformation(raw_mathml);
 }

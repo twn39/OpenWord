@@ -79,8 +79,9 @@ Section &Section::setMargins(const Margins &margins) {
 static pugi::xml_node createPart(pugi::xml_node sectPr, const std::string &partType, HeaderFooterType type) {
     auto root = sectPr.root().child("w:document");
     auto parts = root.child("openword_parts");
-    if (!parts)
+    if (!parts) {
         parts = root.append_child("openword_parts");
+}
 
     auto rel_id_attr = root.attribute("openword_next_rel_id");
     if (!rel_id_attr) {

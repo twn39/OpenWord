@@ -28,8 +28,9 @@ static const char *borderStyleToString(BorderStyle style) {
 
 static void applyBorder(pugi::xml_node borders, const char *borderName, const BorderSettings &bs) {
     auto b = borders.child(borderName);
-    if (!b)
+    if (!b) {
         b = borders.append_child(borderName);
+}
     b.remove_attribute("w:val");
     b.append_attribute("w:val") = borderStyleToString(bs.style);
     b.remove_attribute("w:sz");
