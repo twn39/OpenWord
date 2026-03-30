@@ -69,8 +69,15 @@ list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 
 # 8. Manual Rust Integration
 add_library(rust_math_engine STATIC IMPORTED)
+
+if(MSVC)
+    set(RUST_LIB_NAME "rust_math_engine.lib")
+else()
+    set(RUST_LIB_NAME "librust_math_engine.a")
+endif()
+
 set_target_properties(rust_math_engine PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/rust_math_engine/target/release/librust_math_engine.a"
+    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/rust_math_engine/target/release/${RUST_LIB_NAME}"
 )
 
 # Define the OpenWord library
@@ -124,6 +131,10 @@ target_link_libraries(openword
         fmt::fmt
         rust_math_engine
 )
+
+if(MSVC)
+    target_link_libraries(openword PRIVATE Bcrypt ws2_32 user32 advapi32)
+endif()
 
 # Demo and Tests
 add_executable(openword_demo demo/main.cpp)
