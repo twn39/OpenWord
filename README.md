@@ -3,6 +3,7 @@
   <p><strong>A modern, high-performance C++17 library for creating, parsing, and manipulating Microsoft Word (`.docx`) files.</strong></p>
   
   [![CI](https://github.com/twn39/OpenWord/actions/workflows/ci.yml/badge.svg)](https://github.com/twn39/OpenWord/actions/workflows/ci.yml)
+  [![Docs](https://github.com/twn39/OpenWord/actions/workflows/pages.yml/badge.svg)](https://twn39.github.io/OpenWord/)
   [![C++17](https://img.shields.io/badge/standard-C%2B%2B17-blue.svg)](https://en.cppreference.com/w/cpp/17)
   [![Rust](https://img.shields.io/badge/engine-Rust-orange.svg)](https://www.rust-lang.org/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
@@ -26,8 +27,8 @@ It is built with a zero-compromise approach to performance and safety, strictly 
 
 ## 📚 Documentation
 
-- **[Tutorial & Examples](docs/tutorial.md)**: A comprehensive, step-by-step developer guide with code snippets.
-- **API Reference**: Generate local HTML documentation using Doxygen (`make doc_doxygen`).
+- **[Online API Reference & Tutorial](https://twn39.github.io/OpenWord/)**: Browse the complete, auto-generated Doxygen documentation.
+- **[Local Tutorial](docs/tutorial.md)**: A step-by-step developer guide with code snippets.
 
 ## 🛠 Technical Stack
 
