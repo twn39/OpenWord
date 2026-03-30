@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }} / C++${{ matrix.cpp_std }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        cpp_std: [17]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install System Dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake g++ libxml2-dev libxslt1-dev
+        
+    - name: Install System Dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install cmake libxml2 libxslt
+        # macOS has clang by default
+
+    - name: Install Rust Toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+
+    - name: Build Rust Math Engine
+      run: |
+        cd rust_math_engine
+        cargo build --release
+
+    - name: Configure CMake
+      run: cmake -S . -B build -DCMAKE_CXX_STANDARD=${{ matrix.cpp_std }} -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build C++ Library and Executables
+      run: cmake --build build --config Release -j 4
+
+    - name: Run C++ Tests (Catch2)
+      working-directory: build
+      run: ctest --output-on-failure -C Release
+
+    - name: Run Demo Application (Unix)
+      if: runner.os != 'Windows'
+      working-directory: build
+      run: ./openword_demo
+        
+    - name: Run Demo Application (Windows)
+      if: runner.os == 'Windows'
+      working-directory: build
+      run: .\Release\openword_demo.exe
