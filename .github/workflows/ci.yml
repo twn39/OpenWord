@@ -31,6 +31,12 @@ jobs:
         brew install cmake libxml2 libxslt
         # macOS has clang by default
 
+
+    - name: Install System Dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        vcpkg install libxml2 libxslt
+
     - name: Install Rust Toolchain
       uses: dtolnay/rust-toolchain@stable
       with:
@@ -42,7 +48,11 @@ jobs:
         cargo build --release
 
     - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_CXX_STANDARD=${{ matrix.cpp_std }} -DCMAKE_BUILD_TYPE=Release
+      run: >
+        cmake -S . -B build 
+        -DCMAKE_CXX_STANDARD=${{ matrix.cpp_std }} 
+        -DCMAKE_BUILD_TYPE=Release 
+        ${{ runner.os == 'Windows' && format('-DCMAKE_TOOLCHAIN_FILE={0}/scripts/buildsystems/vcpkg.cmake', env.VCPKG_INSTALLATION_ROOT) || '' }}
 
     - name: Build C++ Library and Executables
       run: cmake --build build --config Release -j 4
