@@ -133,7 +133,8 @@ target_link_libraries(openword
 )
 
 if(MSVC)
-    target_link_libraries(openword PRIVATE Bcrypt ws2_32 user32 advapi32)
+    # Rust standard library on Windows requires these system libraries
+    target_link_libraries(openword PRIVATE Bcrypt ws2_32 user32 advapi32 ntdll userenv)
 endif()
 
 # Demo and Tests
