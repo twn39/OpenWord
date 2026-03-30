@@ -591,6 +591,42 @@ void test_breaks() {
     fmt::print("- test_24_breaks.docx (Line and Page Breaks)\n");
 }
 
+void test_headers_footers() {
+    openword::Document doc;
+    
+    auto sec = doc.finalSection();
+    
+    // Header
+    auto header = sec.addHeader();
+    header.addParagraph("Confidential Document - Company Internal");
+    
+    // Footer with Page Numbers
+    auto footer = sec.addFooter();
+    auto pf = footer.addParagraph();
+    pf.setAlignment("center");
+    pf.addRun("Page ");
+    pf.addPageNumber();
+    pf.addRun(" of ");
+    pf.addTotalPages();
+    
+    // Push content to create multiple pages
+    for (int i = 0; i < 60; ++i) {
+        doc.addParagraph("This is line " + std::to_string(i) + ". We need to generate enough text to push the document onto a second page to verify that the PAGE and NUMPAGES dynamic fields correctly compute and render the page numbers across the entire document without hardcoding the digits.");
+    }
+    
+    // New Section (Remove header, keep footer)
+    auto sec2 = doc.addParagraph().appendSectionBreak();
+    sec2.removeHeader(); // Unlink header
+    doc.addParagraph("This is Section 2. The header should be GONE, but the footer (with page numbers) should continue continuously from the previous section.");
+    
+    for (int i = 0; i < 20; ++i) {
+        doc.addParagraph("More filler text for section 2...");
+    }
+    
+    doc.save("test_25_headers_footers.docx");
+    fmt::print("- test_25_headers_footers.docx (Headers, Footers, and Dynamic Page Numbers)\n");
+}
+
 void test_metadata_advanced() {
     openword::Document doc;
     
@@ -653,6 +689,7 @@ int main() {
     test_comments();
     test_nested_table();
     test_breaks();
+    test_headers_footers();
 
     fmt::print("\nDone! Please verify test_20_watermark_toc.docx and test_21_advanced_metadata.docx.\n");
     return 0;

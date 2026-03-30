@@ -199,6 +199,11 @@ public:
     
     Header addHeader(HeaderFooterType type = HeaderFooterType::Default);
     Footer addFooter(HeaderFooterType type = HeaderFooterType::Default);
+    
+    // --- Header/Footer Controls ---
+    Section& removeHeader(HeaderFooterType type = HeaderFooterType::Default);
+    Section& removeFooter(HeaderFooterType type = HeaderFooterType::Default);
+    
     Section& setColumns(int count, int spaceTwips = 720);
 private:
     void* node_;
@@ -284,6 +289,8 @@ public:
     
     Run addRun(const std::string& text = "");
     void addRawXml(const std::string& xml);
+    Run addPageNumber();
+    Run addTotalPages();
     
     /**
      * @brief Adds an image to the paragraph.

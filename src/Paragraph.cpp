@@ -773,3 +773,52 @@ void Paragraph::addRawXml(const std::string& xml) {
 }
 
 } // namespace openword
+
+openword::Run openword::Paragraph::addPageNumber() {
+    auto n = cast_node(node_);
+    auto r = n.append_child("w:r");
+    
+    // fldChar begin
+    auto fldBegin = r.append_child("w:fldChar");
+    fldBegin.append_attribute("w:fldCharType") = "begin";
+    
+    // instrText
+    auto instr = r.append_child("w:instrText");
+    instr.append_attribute("xml:space") = "preserve";
+    instr.text().set(" PAGE ");
+    
+    // fldChar separate
+    auto fldSep = r.append_child("w:fldChar");
+    fldSep.append_attribute("w:fldCharType") = "separate";
+    
+    // Default displayed page number (will be updated by Word)
+    r.append_child("w:t").text().set("1");
+    
+    // fldChar end
+    auto fldEnd = r.append_child("w:fldChar");
+    fldEnd.append_attribute("w:fldCharType") = "end";
+    
+    return Run(r.internal_object());
+}
+
+openword::Run openword::Paragraph::addTotalPages() {
+    auto n = cast_node(node_);
+    auto r = n.append_child("w:r");
+    
+    auto fldBegin = r.append_child("w:fldChar");
+    fldBegin.append_attribute("w:fldCharType") = "begin";
+    
+    auto instr = r.append_child("w:instrText");
+    instr.append_attribute("xml:space") = "preserve";
+    instr.text().set(" NUMPAGES ");
+    
+    auto fldSep = r.append_child("w:fldChar");
+    fldSep.append_attribute("w:fldCharType") = "separate";
+    
+    r.append_child("w:t").text().set("1");
+    
+    auto fldEnd = r.append_child("w:fldChar");
+    fldEnd.append_attribute("w:fldCharType") = "end";
+    
+    return Run(r.internal_object());
+}

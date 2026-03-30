@@ -145,3 +145,27 @@ Section& Section::setColumns(int count, int spaceTwips) {
 }
 
 } // namespace openword
+
+openword::Section& openword::Section::removeHeader(HeaderFooterType type) {
+    auto n = cast_node(node_);
+    std::string type_str = (type == HeaderFooterType::First) ? "first" : (type == HeaderFooterType::Even) ? "even" : "default";
+    for (auto child : n.children("w:headerReference")) {
+        if (std::string(child.attribute("w:type").value()) == type_str) {
+            n.remove_child(child);
+            break;
+        }
+    }
+    return *this;
+}
+
+openword::Section& openword::Section::removeFooter(HeaderFooterType type) {
+    auto n = cast_node(node_);
+    std::string type_str = (type == HeaderFooterType::First) ? "first" : (type == HeaderFooterType::Even) ? "even" : "default";
+    for (auto child : n.children("w:footerReference")) {
+        if (std::string(child.attribute("w:type").value()) == type_str) {
+            n.remove_child(child);
+            break;
+        }
+    }
+    return *this;
+}
