@@ -74,7 +74,26 @@ set_target_properties(rust_math_engine PROPERTIES
 )
 
 # Define the OpenWord library
+
+# --- Embed Resources (XSLT) ---
+set(MML2OMML_XSL ${CMAKE_CURRENT_SOURCE_DIR}/resources/MML2OMML.XSL)
+set(MML2OMML_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/MML2OMML_XSL.h)
+
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
+
+add_custom_command(
+    OUTPUT ${MML2OMML_HEADER}
+    COMMAND ${CMAKE_COMMAND} 
+        -DRESOURCE_IN=${MML2OMML_XSL} 
+        -DVARIABLE_NAME=MML2OMML_XSL_DATA 
+        -DHEADER_OUT=${MML2OMML_HEADER} 
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedResource.cmake
+    DEPENDS ${MML2OMML_XSL} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/EmbedResource.cmake
+    COMMENT "Embedding MML2OMML.XSL into C++ header"
+)
+
 add_library(openword
+    ${MML2OMML_HEADER}
     src/Document.cpp
     src/Run.cpp
     src/Paragraph.cpp
@@ -86,6 +105,7 @@ add_library(openword
 )
 
 target_include_directories(openword
+    PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated
     PUBLIC 
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>

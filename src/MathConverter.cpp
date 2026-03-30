@@ -2,6 +2,10 @@
 #include <algorithm>
 #include <fmt/core.h>
 #include <gsl/gsl>
+
+// Generated embedded resource
+#include "MML2OMML_XSL.h"
+
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <libxslt/transform.h>
@@ -157,7 +161,16 @@ std::string sanitize_omml(const std::string &raw_omml) {
 std::string apply_xslt_transformation(const std::string &raw_mathml) {
     std::string mathml = sanitize_mathml(raw_mathml);
 
-    xsltStylesheetPtr cur = xsltParseStylesheetFile((const xmlChar *)"resources/MML2OMML.XSL");
+    // Parse the XSLT stylesheet directly from the embedded static byte array
+    xsltStylesheetPtr cur = nullptr;
+    xmlDocPtr style_doc = xmlReadMemory(
+        reinterpret_cast<const char*>(openword_resources::MML2OMML_XSL_DATA),
+        openword_resources::MML2OMML_XSL_DATA_LEN,
+        "MML2OMML.XSL", nullptr, 0);
+        
+    if (style_doc) {
+        cur = xsltParseStylesheetDoc(style_doc);
+    }
     if (!cur) {
         return "";
     }
