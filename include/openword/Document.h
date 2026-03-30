@@ -429,7 +429,7 @@ class Cell {
 
 /**
  * @brief Represents a Table in the Word document.
- * 
+ *
  * @par Example: Creating and Formatting a Table
  * @code
  * auto t = doc.addTable(2, 2);

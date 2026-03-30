@@ -103,7 +103,7 @@ ParagraphFormat &ParagraphFormat::setSpacing(int beforeTwips, int afterTwips) {
 static pugi::xml_node get_or_insert_meta(pugi::xml_node parent, const char *name) {
     if (auto n = parent.child(name)) {
         return n;
-}
+    }
 
     // Find the first layout property node to insert BEFORE it
     pugi::xml_node ref;
@@ -117,7 +117,7 @@ static pugi::xml_node get_or_insert_meta(pugi::xml_node parent, const char *name
 
     if (ref) {
         return parent.insert_child_before(name, ref);
-}
+    }
     return parent.append_child(name);
 }
 

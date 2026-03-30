@@ -33,10 +33,10 @@ std::string sanitize_mathml(const std::string &input) {
     pugi::xml_document doc;
     if (!doc.load_string(input.c_str())) {
         return input;
-}
+    }
 
     // 1. Remove all mspace and layout hints that often break conversion
-    std::array<const char*, 5> unwanted = {"mspace", "maction", "merror", "mphantom", "mpath"};
+    std::array<const char *, 5> unwanted = {"mspace", "maction", "merror", "mphantom", "mpath"};
     for (const char *name : unwanted) {
         auto matches = doc.select_nodes((std::string("//*[local-name()='") + name + "']").c_str());
         for (auto m : matches)
@@ -57,7 +57,7 @@ std::string sanitize_mathml(const std::string &input) {
     auto math = doc.child("mml:math");
     if (math) {
         math.append_attribute("xmlns:mml") = "http://www.w3.org/1998/Math/MathML";
-}
+    }
 
     xml_string_writer writer;
     doc.save(writer, "", pugi::format_raw);
@@ -67,7 +67,7 @@ std::string sanitize_mathml(const std::string &input) {
         size_t pos = 0;
         while ((pos = str.find(target, pos)) != std::string::npos) {
             str.erase(pos, target.length());
-}
+        }
     };
 
     const char *invisible_seqs[] = {"\xE2\x81\xA1",    "\xE2\x81\xA2",    "\xE2\x81\xA3", "\xE2\x81\xA4",
@@ -75,7 +75,7 @@ std::string sanitize_mathml(const std::string &input) {
                                     "&ApplyFunction;", "&InvisibleTimes;"};
     for (const char *seq : invisible_seqs) {
         remove_all(seq);
-}
+    }
 
     return str;
 }
@@ -116,7 +116,7 @@ void process_omml_node(pugi::xml_node node) {
             node.parent().remove_child(node);
             if (next) {
                 process_omml_node(next);
-}
+            }
             return;
         }
     }
@@ -147,7 +147,7 @@ std::string sanitize_omml(const std::string &raw_omml) {
     pugi::xml_document doc;
     if (!doc.load_string(raw_omml.c_str())) {
         return raw_omml;
-}
+    }
     process_omml_node(doc.root());
     xml_string_writer writer;
     doc.save(writer, "", pugi::format_raw);
@@ -160,19 +160,19 @@ std::string apply_xslt_transformation(const std::string &raw_mathml) {
     xsltStylesheetPtr cur = xsltParseStylesheetFile((const xmlChar *)"resources/MML2OMML.XSL");
     if (!cur) {
         return "";
-}
+    }
     auto cleanup_xslt = gsl::finally([cur]() { xsltFreeStylesheet(cur); });
 
     xmlDocPtr xml_doc = xmlReadMemory(mathml.c_str(), static_cast<int>(mathml.length()), nullptr, nullptr, 0);
     if (!xml_doc) {
         return "";
-}
+    }
     auto cleanup_doc = gsl::finally([xml_doc]() { xmlFreeDoc(xml_doc); });
 
     xmlDocPtr res = xsltApplyStylesheet(cur, xml_doc, nullptr);
     if (!res) {
         return "";
-}
+    }
     auto cleanup_res = gsl::finally([res]() { xmlFreeDoc(res); });
 
     xmlChar *xml_res = nullptr;
@@ -180,7 +180,7 @@ std::string apply_xslt_transformation(const std::string &raw_mathml) {
     xsltSaveResultToString(&xml_res, &len, res, cur);
     if (!xml_res) {
         return "";
-}
+    }
 
     std::string omml_str(reinterpret_cast<char *>(xml_res), len);
     xmlFree(xml_res);
@@ -193,7 +193,7 @@ std::string convert_latex_to_omml(const std::string &latex) {
     char *raw_mathml = latex_to_mathml_c(latex.c_str());
     if (!raw_mathml) {
         return "";
-}
+    }
     auto cleanup_rust = gsl::finally([raw_mathml]() { free_rust_string(raw_mathml); });
     return apply_xslt_transformation(raw_mathml);
 }

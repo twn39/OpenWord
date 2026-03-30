@@ -81,7 +81,7 @@ static pugi::xml_node createPart(pugi::xml_node sectPr, const std::string &partT
     auto parts = root.child("openword_parts");
     if (!parts) {
         parts = root.append_child("openword_parts");
-}
+    }
 
     auto rel_id_attr = root.attribute("openword_next_rel_id");
     if (!rel_id_attr) {

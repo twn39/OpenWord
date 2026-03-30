@@ -12,7 +12,7 @@ static std::pair<int, int> getImageSize(const std::string &path) {
     open_ifstream(file, path, std::ios::binary);
     if (!file.is_open()) {
         return {0, 0};
-}
+    }
 
     std::array<unsigned char, 24> buf;
     if (file.read(reinterpret_cast<char *>(buf.data()), 24)) {
@@ -30,11 +30,11 @@ static std::pair<int, int> getImageSize(const std::string &path) {
                 int marker = file.get();
                 if (marker != 0xFF) {
                     break;
-}
+                }
                 int type = file.get();
                 if (type == EOF || file.eof()) {
                     break;
-}
+                }
 
                 int len_hi = file.get();
                 int len_lo = file.get();
@@ -637,7 +637,7 @@ static void applyParaBorder(pugi::xml_node borders, const char *borderName, cons
     auto b = borders.child(borderName);
     if (!b) {
         b = borders.append_child(borderName);
-}
+    }
 
     // We must manually duplicate the logic here or share it.
     // The previous applyBorder function is static inside Table.cpp.

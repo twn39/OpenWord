@@ -30,7 +30,7 @@ static void applyBorder(pugi::xml_node borders, const char *borderName, const Bo
     auto b = borders.child(borderName);
     if (!b) {
         b = borders.append_child(borderName);
-}
+    }
     b.remove_attribute("w:val");
     b.append_attribute("w:val") = borderStyleToString(bs.style);
     b.remove_attribute("w:sz");
