@@ -47,11 +47,51 @@ std::string sanitize_mathml(const std::string &input) {
             m.node().parent().remove_child(m.node());
     }
 
-    // 2. Ensure mml: prefix for all elements
+    // 2. Ensure mml: prefix for all elements and fix tex2math dot mappings
     struct prefixer : pugi::xml_tree_walker {
         bool for_each(pugi::xml_node &node) override {
-            if (node.type() == pugi::node_element && std::string(node.name()).find(':') == std::string::npos) {
-                node.set_name((std::string("mml:") + node.name()).c_str());
+            if (node.type() == pugi::node_element) {
+                std::string name = node.name();
+                
+                // Fix tex2math dots: convert <mi>\dots</mi> to <mo>&#x22ef;</mo> (⋯) etc.
+                if (name == "mi" || name == "mml:mi") {
+                    std::string val = node.child_value();
+                    if (val == "\\dots" || val == "\\cdots" || val == "⋯") {
+                        node.set_name(name == "mi" ? "mo" : "mml:mo");
+                        node.first_child().set_value("⋯");
+                    } else if (val == "\\vdots" || val == "\\varvdots" || val == "⋮") {
+                        node.set_name(name == "mi" ? "mo" : "mml:mo");
+                        node.first_child().set_value("⋮");
+                    } else if (val == "\\ddots" || val == "⋱") {
+                        node.set_name(name == "mi" ? "mo" : "mml:mo");
+                        node.first_child().set_value("⋱");
+                    } else if (val == "\\implies") {
+                        node.set_name(name == "mi" ? "mo" : "mml:mo");
+                        node.first_child().set_value("⟹");
+                    } else if (val == "\\impliedby") {
+                        node.set_name(name == "mi" ? "mo" : "mml:mo");
+                        node.first_child().set_value("⟸");
+                    } else if (val == "\\iff") {
+                        node.set_name(name == "mi" ? "mo" : "mml:mo");
+                        node.first_child().set_value("⟺");
+                    } else if (val == "\\notin") {
+                        node.set_name(name == "mi" ? "mo" : "mml:mo");
+                        node.first_child().set_value("∉");
+                    } else if (val == "\\ne" || val == "\\neq") {
+                        node.set_name(name == "mi" ? "mo" : "mml:mo");
+                        node.first_child().set_value("≠");
+                    } else if (val == "\\imath") {
+                        node.first_child().set_value("ı");
+                    } else if (val == "\\jmath") {
+                        node.first_child().set_value("ȷ");
+                    } else if (val == "\\thetasym") {
+                        node.first_child().set_value("ϑ");
+                    }
+                }
+
+                if (name.find(':') == std::string::npos) {
+                    node.set_name((std::string("mml:") + name).c_str());
+                }
             }
             return true;
         }
@@ -98,7 +138,7 @@ void process_omml_node(pugi::xml_node node) {
         auto e = node.child("m:e");
         if (e && !e.first_child()) {
             pugi::xml_node sib = node.next_sibling();
-            while (sib) { // NOLINT(bugprone-infinite-loop)
+            while (sib) {
                 pugi::xml_node next = sib.next_sibling();
                 // Move mathematical elements into the base
                 if (sib.type() == pugi::node_element ||
@@ -140,7 +180,7 @@ void process_omml_node(pugi::xml_node node) {
         node.append_child("m:r").append_child("m:t").set_value("\xE2\x80\x8B"); // ZWSP
     }
 
-    for (pugi::xml_node child = node.first_child(); child;) { // NOLINT(bugprone-infinite-loop)
+    for (pugi::xml_node child = node.first_child(); child;) {
         pugi::xml_node next = child.next_sibling();
         process_omml_node(child);
         child = next;

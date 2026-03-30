@@ -7,5 +7,6 @@ edition = "2021"
 crate-type = ["staticlib"]
 
 [dependencies]
-math-core = "0.6.0"
 libc = "0.2"
+tex2math = "1.0.2"
+winnow = "0.6"

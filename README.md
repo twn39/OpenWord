@@ -34,7 +34,7 @@ It is built with a zero-compromise approach to performance and safety, strictly 
 OpenWord automatically manages its C++ dependencies via CMake `FetchContent`. No manual downloads required.
 
 - **C++17**: Core library architecture.
-- **Rust (2021)**: LaTeX to MathML conversion (via `math-core`).
+- **Rust (2021)**: LaTeX to MathML conversion (via `tex2math`).
 - **libxml2 & libxslt**: Lightning-fast XML manipulation and MathML-to-OMML XSLT transformations.
 - **pugixml**: Zero-allocation DOM parsing.
 - **libzip**: Secure `.docx` archive packing.
