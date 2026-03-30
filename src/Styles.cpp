@@ -90,7 +90,26 @@ ParagraphFormat& ParagraphFormat::setSpacing(int beforeTwips, int afterTwips) {
     return *this;
 }
 
+
+static pugi::xml_node get_or_insert_meta(pugi::xml_node parent, const char* name) {
+    if (auto n = parent.child(name)) return n;
+    
+    // Find the first layout property node to insert BEFORE it
+    pugi::xml_node ref;
+    for (auto child : parent.children()) {
+        std::string n = child.name();
+        if (n == "w:pPr" || n == "w:rPr" || n == "w:tblPr" || n == "w:tcPr" || n == "w:trPr") {
+            ref = child;
+            break;
+        }
+    }
+    
+    if (ref) return parent.insert_child_before(name, ref);
+    return parent.append_child(name);
+}
+
 Style::Style(void* node) : node_(node) {}
+
 
 Font Style::getFont() {
     auto n = cast_node(node_);
@@ -108,12 +127,58 @@ ParagraphFormat Style::getParagraphFormat() {
 
 Style& Style::setName(const std::string& name) {
     auto n = cast_node(node_);
-    auto nameNode = n.child("w:name");
-    if (!nameNode) nameNode = n.append_child("w:name");
+    auto nameNode = get_or_insert_meta(n, "w:name");
     nameNode.remove_attribute("w:val");
     nameNode.append_attribute("w:val") = name.c_str();
     return *this;
 }
+
+Style& Style::setBasedOn(const std::string& parentStyleId) {
+    auto n = cast_node(node_);
+    auto node = get_or_insert_meta(n, "w:basedOn");
+    node.remove_attribute("w:val");
+    node.append_attribute("w:val") = parentStyleId.c_str();
+    return *this;
+}
+
+Style& Style::setNextStyle(const std::string& nextStyleId) {
+    auto n = cast_node(node_);
+    auto node = get_or_insert_meta(n, "w:next");
+    node.remove_attribute("w:val");
+    node.append_attribute("w:val") = nextStyleId.c_str();
+    return *this;
+}
+
+Style& Style::setPrimary(bool isPrimary) {
+    auto n = cast_node(node_);
+    if (isPrimary) {
+        get_or_insert_meta(n, "w:qFormat");
+    } else {
+        n.remove_child("w:qFormat");
+    }
+    return *this;
+}
+
+Style& Style::setUiPriority(int priority) {
+    auto n = cast_node(node_);
+    auto node = get_or_insert_meta(n, "w:uiPriority");
+    node.remove_attribute("w:val");
+    node.append_attribute("w:val") = std::to_string(priority).c_str();
+    return *this;
+}
+
+Style& Style::setHidden(bool isHidden) {
+    auto n = cast_node(node_);
+    if (isHidden) {
+        get_or_insert_meta(n, "w:hidden");
+        get_or_insert_meta(n, "w:semiHidden");
+    } else {
+        n.remove_child("w:hidden");
+        n.remove_child("w:semiHidden");
+    }
+    return *this;
+}
+
 
 StyleCollection::StyleCollection(void* node) : node_(node) {}
 

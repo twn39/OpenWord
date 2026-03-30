@@ -30,10 +30,28 @@ void test_text_formatting() {
 
 void test_styles() {
     openword::Document doc;
+    
+    // 1. Built-in styles
     auto p1 = doc.addParagraph("Standard Built-in Heading 1");
     p1.setStyle("Heading1");
-    auto p2 = doc.addParagraph("Standard Built-in Heading 2");
-    p2.setStyle("Heading2");
+    
+    // 2. Custom Style with Inheritance and UI Controls
+    auto customTheme = doc.styles().add("MyCustomTheme");
+    customTheme.setName("My Custom Theme")
+               .setBasedOn("Heading1")   // Inherits fonts and sizes from Heading1
+               .setNextStyle("Normal")   // Hitting enter goes back to normal text
+               .setPrimary(true)         // Show in Quick Styles gallery
+               .setUiPriority(1);        // Force it to the front
+               
+    // Override a specific property (make it blue and centered)
+    customTheme.getFont().setColor("0000FF");
+    customTheme.getParagraphFormat().setSpacing(240, 240);
+    
+    auto p2 = doc.addParagraph("This is a custom style inheriting from Heading1 but dyed Blue.");
+    p2.setStyle("MyCustomTheme");
+    
+    auto p3 = doc.addParagraph("Because 'Next Style' is Normal, if you open this doc in Word, put the cursor at the end of the blue text above, and press Enter, this new paragraph will automatically revert to Normal text.");
+    
     doc.save("test_03_styles.docx");
     fmt::print("- test_03_styles.docx (Styles)\n");
 }

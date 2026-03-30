@@ -136,7 +136,19 @@ public:
     explicit Style(void* node);
     Font getFont();
     ParagraphFormat getParagraphFormat();
+    
+    // Core Identity
     Style& setName(const std::string& name);
+    
+    // Inheritance & Flow
+    Style& setBasedOn(const std::string& parentStyleId);
+    Style& setNextStyle(const std::string& nextStyleId);
+    
+    // UI Controls
+    Style& setPrimary(bool isPrimary = true); // Shows up in Quick Styles gallery
+    Style& setUiPriority(int priority);
+    Style& setHidden(bool isHidden = true);
+    
 private:
     void* node_;
 };
