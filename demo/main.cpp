@@ -186,7 +186,8 @@ void test_lists() {
 void test_math() {
     openword::Document doc;
     doc.addParagraph("LaTeX Full Capability Showcase").setStyle("Heading1");
-    doc.addParagraph("This document demonstrates the library's ability to convert complex LaTeX formulas to OMML (Office Math Markup Language) via a hybrid Rust/C++ engine.");
+    doc.addParagraph("This document demonstrates the library's ability to convert complex LaTeX formulas to OMML "
+                     "(Office Math Markup Language) via a hybrid Rust/C++ engine.");
 
     auto add_latex = [&](const std::string &label, const std::string &latex) {
         doc.addParagraph(label + ":").setSpacing(240, 120);
@@ -199,31 +200,49 @@ void test_math() {
     };
 
     doc.addParagraph("1. Greek Letters and Special Symbols").setStyle("Heading2");
-    add_latex("Lowercase Greek", "\\alpha, \\beta, \\gamma, \\delta, \\epsilon, \\zeta, \\eta, \\theta, \\iota, \\kappa, \\lambda, \\mu, \\nu, \\xi, \\pi, \\rho, \\sigma, \\tau, \\upsilon, \\phi, \\chi, \\psi, \\omega");
-    add_latex("Uppercase Greek", "\\Gamma, \\Delta, \\Theta, \\Lambda, \\Xi, \\Pi, \\Sigma, \\Upsilon, \\Phi, \\Psi, \\Omega");
-    add_latex("Greek Variants", "\\varepsilon, \\varkappa, \\vartheta, \\thetasym, \\varpi, \\varrho, \\varsigma, \\varphi, \\digamma");
-    add_latex("Logic & Sets", "\\forall x \\in \\mathbb{R}, \\exists y > 0 \\text{ s.t. } A \\cup B \\subseteq C \\cap D \\implies P \\iff Q \\impliedby R \\quad \\emptyset \\notin \\ni \\owns");
-    add_latex("Arrows & Relations", "A \\rightarrow B \\Rightarrow C \\uparrow D \\searrow E \\mapsto F \\hookleftarrow G \\leftharpoonup H \\quad \\le \\ge \\equiv \\approx \\propto \\ne \\neq \\sim \\simeq \\ll \\gg");
-    add_latex("Operators", "\\times \\div \\pm \\mp \\cdot \\circ \\oplus \\otimes \\ominus \\odot \\ast \\star \\amalg \\dagger \\ddagger");
-    add_latex("Calculus/Geometry", "\\partial \\nabla \\infty \\angle \\measuredangle \\sphericalangle \\triangle \\square \\perp \\parallel");
-    add_latex("Misc Symbols", "\\imath \\jmath \\hbar \\ell \\Re \\Im \\wp \\aleph \\beth \\gimel \\daleth \\dots \\cdots \\vdots \\ddots \\therefore \\because");
+    add_latex("Lowercase Greek",
+              "\\alpha, \\beta, \\gamma, \\delta, \\epsilon, \\zeta, \\eta, \\theta, \\iota, \\kappa, \\lambda, \\mu, "
+              "\\nu, \\xi, \\pi, \\rho, \\sigma, \\tau, \\upsilon, \\phi, \\chi, \\psi, \\omega");
+    add_latex("Uppercase Greek",
+              "\\Gamma, \\Delta, \\Theta, \\Lambda, \\Xi, \\Pi, \\Sigma, \\Upsilon, \\Phi, \\Psi, \\Omega");
+    add_latex("Greek Variants",
+              "\\varepsilon, \\varkappa, \\vartheta, \\thetasym, \\varpi, \\varrho, \\varsigma, \\varphi, \\digamma");
+    add_latex("Logic & Sets", "\\forall x \\in \\mathbb{R}, \\exists y > 0 \\text{ s.t. } A \\cup B \\subseteq C \\cap "
+                              "D \\implies P \\iff Q \\impliedby R \\quad \\emptyset \\notin \\ni \\owns");
+    add_latex("Arrows & Relations",
+              "A \\rightarrow B \\Rightarrow C \\uparrow D \\searrow E \\mapsto F \\hookleftarrow G \\leftharpoonup H "
+              "\\quad \\le \\ge \\equiv \\approx \\propto \\ne \\neq \\sim \\simeq \\ll \\gg");
+    add_latex("Operators", "\\times \\div \\pm \\mp \\cdot \\circ \\oplus \\otimes \\ominus \\odot \\ast \\star "
+                           "\\amalg \\dagger \\ddagger");
+    add_latex(
+        "Calculus/Geometry",
+        "\\partial \\nabla \\infty \\angle \\measuredangle \\sphericalangle \\triangle \\square \\perp \\parallel");
+    add_latex("Misc Symbols", "\\imath \\jmath \\hbar \\ell \\Re \\Im \\wp \\aleph \\beth \\gimel \\daleth \\dots "
+                              "\\cdots \\vdots \\ddots \\therefore \\because");
 
     doc.addParagraph("2. Calculus and Advanced Analysis").setStyle("Heading2");
     add_latex("Quadratic Formula", "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}");
     add_latex("Limits", "\\lim_{x \\to \\infty} \\left( 1 + \\frac{1}{x} \\right)^x = e");
-    add_latex("Integrals", "\\int_{a}^{b} x^2 \\, dx \\quad \\iint_D f(x,y) \\, dA \\quad \\oint_C \\mathbf{F} \\cdot d\\mathbf{r}");
-    add_latex("Summations & Products", "\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}{6} \\quad \\prod_{i=1}^k (1+x_i)");
-    add_latex("Schrödinger Equation", "i\\hbar \\frac{\\partial}{\\partial t} \\Psi(\\mathbf{r}, t) = \\left[ -\\frac{\\hbar^2}{2m}\\nabla^2 + V(\\mathbf{r}, t) \\right] \\Psi(\\mathbf{r}, t)");
+    add_latex("Integrals",
+              "\\int_{a}^{b} x^2 \\, dx \\quad \\iint_D f(x,y) \\, dA \\quad \\oint_C \\mathbf{F} \\cdot d\\mathbf{r}");
+    add_latex("Summations & Products",
+              "\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}{6} \\quad \\prod_{i=1}^k (1+x_i)");
+    add_latex("Schrödinger Equation",
+              "i\\hbar \\frac{\\partial}{\\partial t} \\Psi(\\mathbf{r}, t) = \\left[ -\\frac{\\hbar^2}{2m}\\nabla^2 + "
+              "V(\\mathbf{r}, t) \\right] \\Psi(\\mathbf{r}, t)");
 
     doc.addParagraph("3. Complex Matrices & Environments").setStyle("Heading2");
     add_latex("Standard PMatrix", "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}");
-    add_latex("BMatrix with dots", "\\begin{bmatrix} 1 & 0 & \\cdots & 0 \\\\ 0 & 1 & \\cdots & 0 \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ 0 & 0 & \\cdots & 1 \\end{bmatrix}");
+    add_latex("BMatrix with dots", "\\begin{bmatrix} 1 & 0 & \\cdots & 0 \\\\ 0 & 1 & \\cdots & 0 \\\\ \\vdots & "
+                                   "\\vdots & \\ddots & \\vdots \\\\ 0 & 0 & \\cdots & 1 \\end{bmatrix}");
     add_latex("Determinant", "|A| = \\begin{vmatrix} a_{11} & a_{12} \\\\ a_{21} & a_{22} \\end{vmatrix}");
     add_latex("Case Analysis", "f(x) = \\begin{cases} x^2 & x < 0 \\\\ 0 & x = 0 \\\\ \\sqrt{x} & x > 0 \\end{cases}");
 
     doc.addParagraph("4. Physics & Engineering").setStyle("Heading2");
-    add_latex("Einstein Field Equation", "R_{\\mu\\nu} - \\frac{1}{2}R g_{\\mu\\nu} + \\Lambda g_{\\mu\\nu} = \\frac{8\\pi G}{c^4} T_{\\mu\\nu}");
-    add_latex("Maxwell Equation (Faraday)", "\\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}");
+    add_latex("Einstein Field Equation",
+              "R_{\\mu\\nu} - \\frac{1}{2}R g_{\\mu\\nu} + \\Lambda g_{\\mu\\nu} = \\frac{8\\pi G}{c^4} T_{\\mu\\nu}");
+    add_latex("Maxwell Equation (Faraday)",
+              "\\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}");
 
     doc.save("test_08_math.docx");
     fmt::print("- test_08_math.docx (LaTeX Full Capability Showcase Generated)\n");

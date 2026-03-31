@@ -151,6 +151,18 @@ target_sources(openword_test PRIVATE tests/test_metadata.cpp)
 target_sources(openword_test PRIVATE tests/test_styles.cpp)
 target_sources(openword_test PRIVATE tests/test_header_footer.cpp)
 
+# Benchmarks
+add_executable(openword_benchmark benchmarks/bench_document.cpp)
+target_link_libraries(openword_benchmark PRIVATE openword Catch2::Catch2WithMain zip)
+
+add_custom_target(run_benchmark
+    COMMAND openword_benchmark
+    DEPENDS openword_benchmark
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Running OpenWord performance benchmarks..."
+)
+
+
 # --- Doxygen Documentation ---
 find_package(Doxygen OPTIONAL_COMPONENTS dot)
 if(DOXYGEN_FOUND)

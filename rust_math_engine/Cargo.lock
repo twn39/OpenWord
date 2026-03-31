@@ -25,9 +25,9 @@ dependencies = [
 
 [[package]]
 name = "tex2math"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4877d968bce2542089bfab3895fc50b3734b3e542570eb87d1dcb5cf90d3ed75"
+checksum = "54bbe8fdd582b00109eed6c594c9614807e9222d902a1a022f9dd42c731f0ccd"
 dependencies = [
  "winnow",
 ]

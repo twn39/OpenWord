@@ -220,6 +220,13 @@ bool Document::save(gsl::czstring filepath) {
             return false;
 
         std::list<std::string> zip_buffers;
+        auto safe_zip_add = [&](const char *name, zip_source_t *source, zip_flags_t flags) {
+            if (!source) return;
+            if (zip_file_add(z, name, source, flags) < 0) {
+                zip_source_free(source);
+            }
+        };
+
         int start_id = pimpl->doc.child("w:document").attribute("openword_next_rel_id").as_int(100);
         pimpl->doc_rels.setNextId(start_id);
 
@@ -261,7 +268,7 @@ bool Document::save(gsl::czstring filepath) {
             core_props += "</cp:coreProperties>";
 
             zip_buffers.push_back(core_props);
-            zip_file_add(z, "docProps/core.xml",
+            safe_zip_add("docProps/core.xml",
                          zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                          ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             ct += "  <Override PartName=\"/docProps/core.xml\" "
@@ -295,7 +302,7 @@ bool Document::save(gsl::czstring filepath) {
 
             app_props += "</Properties>";
             zip_buffers.push_back(app_props);
-            zip_file_add(z, "docProps/app.xml",
+            safe_zip_add("docProps/app.xml",
                          zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                          ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             ct += "  <Override PartName=\"/docProps/app.xml\" "
@@ -331,7 +338,7 @@ bool Document::save(gsl::czstring filepath) {
                 custom_props += "</Properties>";
 
                 zip_buffers.push_back(custom_props);
-                zip_file_add(z, "docProps/custom.xml",
+                safe_zip_add("docProps/custom.xml",
                              zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                              ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
                 ct += "  <Override PartName=\"/docProps/custom.xml\" "
@@ -343,7 +350,7 @@ bool Document::save(gsl::czstring filepath) {
             std::stringstream fs;
             pimpl->footnotes_doc.save(fs, "", pugi::format_raw);
             zip_buffers.push_back(fs.str());
-            zip_file_add(z, "word/footnotes.xml",
+            safe_zip_add("word/footnotes.xml",
                          zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                          ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             pimpl->doc_rels.addRelationship(
@@ -356,7 +363,7 @@ bool Document::save(gsl::czstring filepath) {
             std::stringstream es;
             pimpl->endnotes_doc.save(es, "", pugi::format_raw);
             zip_buffers.push_back(es.str());
-            zip_file_add(z, "word/endnotes.xml",
+            safe_zip_add("word/endnotes.xml",
                          zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                          ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             pimpl->doc_rels.addRelationship(
@@ -369,7 +376,7 @@ bool Document::save(gsl::czstring filepath) {
             std::stringstream cs;
             pimpl->comments_doc.save(cs, "", pugi::format_raw);
             zip_buffers.push_back(cs.str());
-            zip_file_add(z, "word/comments.xml",
+            safe_zip_add("word/comments.xml",
                          zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                          ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             pimpl->doc_rels.addRelationship(
@@ -394,7 +401,7 @@ bool Document::save(gsl::czstring filepath) {
             std::stringstream ss;
             pimpl->styles_doc.save(ss, "", pugi::format_raw);
             zip_buffers.push_back(ss.str());
-            zip_file_add(z, "word/styles.xml",
+            safe_zip_add("word/styles.xml",
                          zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                          ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             pimpl->doc_rels.addRelationship(
@@ -417,7 +424,7 @@ bool Document::save(gsl::czstring filepath) {
                 std::string target = "media/image" + std::to_string(media_count) + "." + ext;
                 pimpl->doc_rels.addRelationship(
                     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image", target, old_rid);
-                zip_file_add(z, ("word/" + target).c_str(), zip_source_file(z, path.c_str(), 0, 0), ZIP_FL_OVERWRITE);
+                safe_zip_add(("word/" + target).c_str(), zip_source_file(z, path.c_str(), 0, 0), ZIP_FL_OVERWRITE);
             }
             pimpl->doc.child("w:document").remove_child(media_store);
         }
@@ -437,7 +444,7 @@ bool Document::save(gsl::czstring filepath) {
                 std::stringstream ss;
                 pdoc.save(ss, "", pugi::format_raw);
                 zip_buffers.push_back(ss.str());
-                zip_file_add(z, ("word/" + pfile).c_str(),
+                safe_zip_add(("word/" + pfile).c_str(),
                              zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                              ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
                 std::string relType =
@@ -455,7 +462,7 @@ bool Document::save(gsl::czstring filepath) {
             std::stringstream ss;
             pimpl->numbering_doc.save(ss, "", pugi::format_raw);
             zip_buffers.push_back(ss.str());
-            zip_file_add(z, "word/numbering.xml",
+            safe_zip_add("word/numbering.xml",
                          zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                          ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             pimpl->doc_rels.addRelationship(
@@ -469,7 +476,7 @@ bool Document::save(gsl::czstring filepath) {
         std::stringstream doc_stream;
         pimpl->doc.save(doc_stream, "", pugi::format_raw);
         zip_buffers.push_back(doc_stream.str());
-        zip_file_add(z, "word/document.xml",
+        safe_zip_add("word/document.xml",
                      zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                      ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
         pimpl->doc.child("w:document").append_attribute("openword_next_rel_id") =
@@ -487,7 +494,7 @@ bool Document::save(gsl::czstring filepath) {
             }
             settings_xml += "</w:settings>";
             zip_buffers.push_back(settings_xml);
-            zip_file_add(z, "word/settings.xml",
+            safe_zip_add("word/settings.xml",
                          zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                          ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
             pimpl->doc_rels.addRelationship(
@@ -508,13 +515,13 @@ bool Document::save(gsl::czstring filepath) {
             std::stringstream rs;
             rels_doc.save(rs, "", pugi::format_raw);
             zip_buffers.push_back(rs.str());
-            zip_file_add(z, "word/_rels/document.xml.rels",
+            safe_zip_add("word/_rels/document.xml.rels",
                          zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                          ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
         }
 
         ct += "</Types>";
-        zip_file_add(z, "[Content_Types].xml", zip_source_buffer(z, ct.data(), ct.size(), 0),
+        safe_zip_add("[Content_Types].xml", zip_source_buffer(z, ct.data(), ct.size(), 0),
                      ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
 
         std::string root_rels =
@@ -537,7 +544,7 @@ bool Document::save(gsl::czstring filepath) {
             }
         }
         root_rels += "</Relationships>";
-        zip_file_add(z, "_rels/.rels", zip_source_buffer(z, root_rels.data(), root_rels.size(), 0),
+        safe_zip_add("_rels/.rels", zip_source_buffer(z, root_rels.data(), root_rels.size(), 0),
                      ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
 
         zip_close(z);

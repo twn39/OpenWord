@@ -47,47 +47,11 @@ std::string sanitize_mathml(const std::string &input) {
             m.node().parent().remove_child(m.node());
     }
 
-    // 2. Ensure mml: prefix for all elements and fix tex2math dot mappings
+    // 2. Ensure mml: prefix for all elements
     struct prefixer : pugi::xml_tree_walker {
         bool for_each(pugi::xml_node &node) override {
             if (node.type() == pugi::node_element) {
                 std::string name = node.name();
-                
-                // Fix tex2math dots: convert <mi>\dots</mi> to <mo>&#x22ef;</mo> (⋯) etc.
-                if (name == "mi" || name == "mml:mi") {
-                    std::string val = node.child_value();
-                    if (val == "\\dots" || val == "\\cdots" || val == "⋯") {
-                        node.set_name(name == "mi" ? "mo" : "mml:mo");
-                        node.first_child().set_value("⋯");
-                    } else if (val == "\\vdots" || val == "\\varvdots" || val == "⋮") {
-                        node.set_name(name == "mi" ? "mo" : "mml:mo");
-                        node.first_child().set_value("⋮");
-                    } else if (val == "\\ddots" || val == "⋱") {
-                        node.set_name(name == "mi" ? "mo" : "mml:mo");
-                        node.first_child().set_value("⋱");
-                    } else if (val == "\\implies") {
-                        node.set_name(name == "mi" ? "mo" : "mml:mo");
-                        node.first_child().set_value("⟹");
-                    } else if (val == "\\impliedby") {
-                        node.set_name(name == "mi" ? "mo" : "mml:mo");
-                        node.first_child().set_value("⟸");
-                    } else if (val == "\\iff") {
-                        node.set_name(name == "mi" ? "mo" : "mml:mo");
-                        node.first_child().set_value("⟺");
-                    } else if (val == "\\notin") {
-                        node.set_name(name == "mi" ? "mo" : "mml:mo");
-                        node.first_child().set_value("∉");
-                    } else if (val == "\\ne" || val == "\\neq") {
-                        node.set_name(name == "mi" ? "mo" : "mml:mo");
-                        node.first_child().set_value("≠");
-                    } else if (val == "\\imath") {
-                        node.first_child().set_value("ı");
-                    } else if (val == "\\jmath") {
-                        node.first_child().set_value("ȷ");
-                    } else if (val == "\\thetasym") {
-                        node.first_child().set_value("ϑ");
-                    }
-                }
 
                 if (name.find(':') == std::string::npos) {
                     node.set_name((std::string("mml:") + name).c_str());
@@ -198,23 +162,36 @@ std::string sanitize_omml(const std::string &raw_omml) {
     return writer.result;
 }
 
+#include <mutex>
+
+// ... inside namespace {
+
+xsltStylesheetPtr get_cached_xslt_stylesheet() {
+    static xsltStylesheetPtr cached_stylesheet = nullptr;
+    static std::once_flag init_flag;
+
+    std::call_once(init_flag, []() {
+        xmlDocPtr style_doc = xmlReadMemory(reinterpret_cast<const char *>(openword_resources::MML2OMML_XSL_DATA),
+                                            openword_resources::MML2OMML_XSL_DATA_LEN, "MML2OMML.XSL", nullptr, 0);
+        if (style_doc) {
+            cached_stylesheet = xsltParseStylesheetDoc(style_doc);
+            if (!cached_stylesheet) {
+                xmlFreeDoc(style_doc);
+            }
+        }
+    });
+
+    return cached_stylesheet;
+}
+
 std::string apply_xslt_transformation(const std::string &raw_mathml) {
     std::string mathml = sanitize_mathml(raw_mathml);
 
-    // Parse the XSLT stylesheet directly from the embedded static byte array
-    xsltStylesheetPtr cur = nullptr;
-    xmlDocPtr style_doc = xmlReadMemory(
-        reinterpret_cast<const char*>(openword_resources::MML2OMML_XSL_DATA),
-        openword_resources::MML2OMML_XSL_DATA_LEN,
-        "MML2OMML.XSL", nullptr, 0);
-        
-    if (style_doc) {
-        cur = xsltParseStylesheetDoc(style_doc);
-    }
+    // Get the cached XSLT stylesheet
+    xsltStylesheetPtr cur = get_cached_xslt_stylesheet();
     if (!cur) {
         return "";
     }
-    auto cleanup_xslt = gsl::finally([cur]() { xsltFreeStylesheet(cur); });
 
     xmlDocPtr xml_doc = xmlReadMemory(mathml.c_str(), static_cast<int>(mathml.length()), nullptr, nullptr, 0);
     if (!xml_doc) {
