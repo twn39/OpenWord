@@ -603,12 +603,18 @@ class Document {
     std::string convertMathMLToOMML(const std::string &mathml) const;
     std::string convertLaTeXToOMML(const std::string &latex) const;
     int replaceText(const std::string &search, const std::string &replace);
-
-    // --- DOM Mutability ---
-    void remove();
-    Paragraph cloneAfter();
-    Paragraph insertParagraphAfter(const std::string &text = "");
-    Table insertTableAfter(int rows, int cols);
+    /**
+     * @brief Template Engine: Clones a table row containing the `search` string.
+     * Generates a new row for each element in the `values` array, replacing placeholders with the map values.
+     * The original row is removed.
+     * @param search The placeholder string identifying the target row.
+     * @param values A vector of maps for replacements.
+     * @return Number of rows generated.
+     */
+    int cloneRowAndSetValues(const std::string &search, const std::vector<std::map<std::string, std::string>> &values);
+    /**
+     * @param search The placeholder string identifying the target row.
+     */
 
   private:
     struct Impl;

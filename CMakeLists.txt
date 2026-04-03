@@ -153,6 +153,8 @@ target_sources(openword_test PRIVATE tests/test_metadata.cpp)
 target_sources(openword_test PRIVATE tests/test_styles.cpp)
 target_sources(openword_test PRIVATE tests/test_header_footer.cpp)
 target_sources(openword_test PRIVATE tests/test_validator.cpp)
+target_sources(openword_test PRIVATE tests/test_template.cpp)
+
 
 
 # Benchmarks

@@ -756,6 +756,80 @@ int Document::replaceText(const std::string &search, const std::string &replace)
     return count;
 }
 
+int Document::cloneRowAndSetValues(const std::string &search,
+                                   const std::vector<std::map<std::string, std::string>> &values) {
+    if (search.empty())
+        return 0;
+
+    struct TextExtractor : pugi::xml_tree_walker {
+        std::string text;
+        bool for_each(pugi::xml_node &node) override {
+            if (std::strcmp(node.name(), "w:t") == 0) {
+                text += node.text().get();
+            }
+            return true;
+        }
+    };
+
+    auto process_rows = [&](pugi::xml_node root) -> int {
+        int created_count = 0;
+        std::vector<pugi::xml_node> target_trs;
+
+        struct TrCollector : pugi::xml_tree_walker {
+            const std::string &search_str;
+            std::vector<pugi::xml_node> &trs;
+            TrCollector(const std::string &s, std::vector<pugi::xml_node> &t) : search_str(s), trs(t) {}
+
+            bool for_each(pugi::xml_node &node) override {
+                if (std::strcmp(node.name(), "w:tr") == 0) {
+                    TextExtractor ext;
+                    node.traverse(ext);
+                    if (ext.text.find(search_str) != std::string::npos) {
+                        trs.push_back(node);
+                    }
+                }
+                return true;
+            }
+        };
+
+        TrCollector collector(search, target_trs);
+        root.traverse(collector);
+
+        for (auto tr : target_trs) {
+            auto parent = tr.parent(); // <w:tbl>
+            if (!parent)
+                continue;
+
+            for (const auto &row_map : values) {
+                pugi::xml_node new_tr = parent.insert_copy_before(tr, tr);
+                Row r(new_tr.internal_object());
+                for (const auto &kv : row_map) {
+                    r.replaceText(kv.first, kv.second);
+                }
+                created_count++;
+            }
+            // Remove the template row
+            parent.remove_child(tr);
+        }
+        return created_count;
+    };
+
+    int count = process_rows(pimpl->body);
+
+    auto parts = pimpl->doc.child("w:document").child("openword_parts");
+    if (parts) {
+        for (auto part : parts.children("part")) {
+            for (auto rootNode : part.children()) {
+                std::string rootName = rootNode.name();
+                if (rootName == "w:hdr" || rootName == "w:ftr") {
+                    count += process_rows(rootNode);
+                }
+            }
+        }
+    }
+    return count;
+}
+
 std::vector<BlockElement> Document::elements() const {
     std::vector<BlockElement> result;
     for (auto node : pimpl->body.children()) {
