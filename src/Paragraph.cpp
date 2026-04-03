@@ -837,6 +837,11 @@ void Paragraph::addRawXml(const std::string &xml) {
     }
 }
 
+
+void TextBox::addHtml(const std::string &html) {
+    parseHtmlAndInsert(html, [this]() { return this->addParagraph(); });
+}
+
 } // namespace openword
 
 openword::Run openword::Paragraph::addPageNumber() {

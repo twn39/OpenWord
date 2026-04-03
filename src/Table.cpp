@@ -617,4 +617,9 @@ std::vector<BlockElement> Cell::elements() const {
     return result;
 }
 
+
+void Cell::addHtml(const std::string &html) {
+    parseHtmlAndInsert(html, [this]() { return this->addParagraph(); });
+}
+
 } // namespace openword

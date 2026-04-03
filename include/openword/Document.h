@@ -184,6 +184,8 @@ class Header {
   public:
     explicit Header(void *node);
     Paragraph addParagraph(const std::string &text = "");
+    void addHtml(const std::string &html);
+
 
   private:
     void *node_;
@@ -193,6 +195,8 @@ class Footer {
   public:
     explicit Footer(void *node);
     Paragraph addParagraph(const std::string &text = "");
+    void addHtml(const std::string &html);
+
 
   private:
     void *node_;
@@ -400,6 +404,8 @@ class Cell {
 
     // --- Content Creation ---
     Paragraph addParagraph(const std::string &text = "");
+    void addHtml(const std::string &html);
+
     /**
      * @brief Nests a new table inside this cell.
      * @param rows Initial number of rows.
@@ -524,6 +530,8 @@ class TextBox {
 
     // TextBox acts as a miniature container
     Paragraph addParagraph(const std::string &text = "");
+    void addHtml(const std::string &html);
+
 
     TextBox &setFillColor(const std::string &hexColor);
     TextBox &setLineColor(const std::string &hexColor);
@@ -557,6 +565,8 @@ class Document {
 
     // --- Content Creation ---
     Paragraph addParagraph(const std::string &text = "");
+    void addHtml(const std::string &html);
+
     /**
      * @brief Nests a new table inside this cell.
      * @param rows Initial number of rows.

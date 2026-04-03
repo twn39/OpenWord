@@ -159,6 +159,14 @@ Section &Section::setColumns(int count, int spaceTwips) {
     return *this;
 }
 
+
+void Header::addHtml(const std::string &html) {
+    parseHtmlAndInsert(html, [this]() { return this->addParagraph(); });
+}
+void Footer::addHtml(const std::string &html) {
+    parseHtmlAndInsert(html, [this]() { return this->addParagraph(); });
+}
+
 } // namespace openword
 
 openword::Section &openword::Section::removeHeader(HeaderFooterType type) {

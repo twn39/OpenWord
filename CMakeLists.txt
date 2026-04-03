@@ -110,6 +110,8 @@ add_library(openword
     src/Numbering.cpp
     src/MathConverter.cpp
     src/Validator.cpp
+    src/HtmlConverter.cpp
+
 
 )
 
@@ -154,6 +156,8 @@ target_sources(openword_test PRIVATE tests/test_styles.cpp)
 target_sources(openword_test PRIVATE tests/test_header_footer.cpp)
 target_sources(openword_test PRIVATE tests/test_validator.cpp)
 target_sources(openword_test PRIVATE tests/test_template.cpp)
+target_sources(openword_test PRIVATE tests/test_html.cpp)
+
 
 
 
@@ -185,3 +189,7 @@ if(DOXYGEN_FOUND)
 else()
     message(STATUS "Doxygen need to be installed to generate the doxygen documentation")
 endif()
+add_executable(openword_template_demo demo/generate_test_doc.cpp)
+target_link_libraries(openword_template_demo PRIVATE openword)
+add_executable(openword_html_demo demo/generate_html_demo.cpp)
+target_link_libraries(openword_html_demo PRIVATE openword)

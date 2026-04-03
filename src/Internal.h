@@ -6,8 +6,14 @@
 #include <map>
 #include <pugixml.hpp>
 #include <string>
+#include <functional>
+
 
 namespace openword {
+
+class Paragraph;
+void parseHtmlAndInsert(const std::string& html, const std::function<Paragraph()>& createPara);
+
 
 // Helper to open std::ifstream safely using a UTF-8 path across platforms (especially Windows)
 inline void open_ifstream(std::ifstream &stream, const std::string &utf8_path,

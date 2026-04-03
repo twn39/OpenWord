@@ -895,6 +895,11 @@ void Document::addWatermark(const std::string &text) {
     p.addRawXml(vmlStr);
 }
 
+
+void Document::addHtml(const std::string &html) {
+    parseHtmlAndInsert(html, [this]() { return this->addParagraph(); });
+}
+
 } // namespace openword
 
 int openword::Document::createComment(const std::string &text, const std::string &author, const std::string &initials) {
