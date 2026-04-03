@@ -37,4 +37,14 @@ TEST_CASE("HTML to Word Rendering", "[html]") {
         t.cell(0, 0).addHtml("<b>In cell</b>");
         REQUIRE(t.cell(0, 0).text() == "In cell");
     }
+    
+    SECTION("Footnotes via Cite") {
+        doc.addHtml("<p>Main text <cite title=\"Reference description\">[1]</cite></p>");
+        auto els = doc.elements();
+        REQUIRE(els.size() > 0);
+        auto p = std::get<Paragraph>(els[0]);
+        
+        // We expect "Main text [1]" to be the text
+        REQUIRE(p.text() == "Main text [1]");
+    }
 }

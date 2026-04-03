@@ -897,7 +897,7 @@ void Document::addWatermark(const std::string &text) {
 
 
 void Document::addHtml(const std::string &html) {
-    parseHtmlAndInsert(html, [this]() { return this->addParagraph(); });
+    parseHtmlAndInsert(html, [this]() { return this->addParagraph(); }, this);
 }
 
 } // namespace openword

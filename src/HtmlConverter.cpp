@@ -62,7 +62,7 @@ Color parseCssColor(const std::string& styleStr) {
     return Color::Auto();
 }
 
-void traverseHtmlNode(xmlNodePtr node, Formatting fmt, std::optional<Paragraph>& currentPara, bool& hasPara, const std::function<Paragraph()>& createPara) {
+void traverseHtmlNode(xmlNodePtr node, Formatting fmt, std::optional<Paragraph>& currentPara, bool& hasPara, const std::function<Paragraph()>& createPara, Document* doc) {
     for (xmlNodePtr cur = node->children; cur; cur = cur->next) {
         if (cur->type == XML_TEXT_NODE) {
             std::string text = reinterpret_cast<const char*>(cur->content);
@@ -100,7 +100,50 @@ void traverseHtmlNode(xmlNodePtr node, Formatting fmt, std::optional<Paragraph>&
             else if (tag == "s" || tag == "strike" || tag == "del") newFmt.strike = true;
             else if (tag == "sup") newFmt.sup = true;
             else if (tag == "sub") newFmt.sub = true;
-            else if (tag == "a") {
+            else if (tag == "cite") {
+                xmlChar* title = xmlGetProp(cur, BAD_CAST "title");
+                if (title && doc) {
+                    std::string citeText = reinterpret_cast<const char*>(title);
+                    xmlFree(title);
+                    
+                    int fnId = doc->createFootnote(citeText);
+                    
+                    if (!hasPara) {
+                        currentPara = createPara();
+                        hasPara = true;
+                    }
+                    
+                    xmlChar* innerText = xmlNodeGetContent(cur);
+                    if (innerText) {
+                        currentPara->addRun(reinterpret_cast<const char*>(innerText));
+                        xmlFree(innerText);
+                    }
+                    currentPara->addFootnoteReference(fnId);
+                    continue;
+                }
+            } else if (tag == "a") {
+                xmlChar* title = xmlGetProp(cur, BAD_CAST "title");
+                if (title) {
+                    std::string citeText = reinterpret_cast<const char*>(title);
+                    xmlFree(title);
+                    
+                    int fnId = doc->createFootnote(citeText);
+                    
+                    if (!hasPara) {
+                        currentPara = createPara();
+                        hasPara = true;
+                    }
+                    
+                    // We extract text content of <cite> internally
+                    xmlChar* innerText = xmlNodeGetContent(cur);
+                    if (innerText) {
+                        currentPara->addRun(reinterpret_cast<const char*>(innerText));
+                        xmlFree(innerText);
+                    }
+                    currentPara->addFootnoteReference(fnId);
+                    continue; // Skip traversing children as we manually extracted content
+                }
+            } else if (tag == "a") {
                 xmlChar* href = xmlGetProp(cur, BAD_CAST "href");
                 if (href) {
                     newFmt.linkUrl = reinterpret_cast<const char*>(href);
@@ -131,7 +174,7 @@ void traverseHtmlNode(xmlNodePtr node, Formatting fmt, std::optional<Paragraph>&
                 else if (tag == "h6") { newFmt.isHeading = true; newFmt.headingStyle = "Heading6"; }
             }
 
-            traverseHtmlNode(cur, newFmt, currentPara, hasPara, createPara);
+            traverseHtmlNode(cur, newFmt, currentPara, hasPara, createPara, doc);
 
             if (isBlock) {
                 hasPara = false; // End of block means next text gets a new paragraph
@@ -142,21 +185,21 @@ void traverseHtmlNode(xmlNodePtr node, Formatting fmt, std::optional<Paragraph>&
 
 } // namespace
 
-void parseHtmlAndInsert(const std::string& html, const std::function<Paragraph()>& createPara) {
+void parseHtmlAndInsert(const std::string& html, const std::function<Paragraph()>& createPara, Document* doc) {
     if (html.empty()) return;
 
-    htmlDocPtr doc = htmlReadMemory(html.c_str(), static_cast<int>(html.length()), nullptr, "UTF-8", HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING | HTML_PARSE_RECOVER);
-    if (!doc) return;
+    htmlDocPtr html_doc = htmlReadMemory(html.c_str(), static_cast<int>(html.length()), nullptr, "UTF-8", HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING | HTML_PARSE_RECOVER);
+    if (!html_doc) return;
 
-    xmlNodePtr root = xmlDocGetRootElement(doc);
+    xmlNodePtr root = xmlDocGetRootElement(html_doc);
     if (root) {
         std::optional<Paragraph> currentPara = std::nullopt;
         bool hasPara = false;
         Formatting defaultFmt;
-        traverseHtmlNode(root, defaultFmt, currentPara, hasPara, createPara);
+        traverseHtmlNode(root, defaultFmt, currentPara, hasPara, createPara, doc);
     }
 
-    xmlFreeDoc(doc);
+    xmlFreeDoc(html_doc);
 }
 
 } // namespace openword

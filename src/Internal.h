@@ -12,7 +12,8 @@
 namespace openword {
 
 class Paragraph;
-void parseHtmlAndInsert(const std::string& html, const std::function<Paragraph()>& createPara);
+class Document;
+void parseHtmlAndInsert(const std::string& html, const std::function<Paragraph()>& createPara, Document* doc = nullptr);
 
 
 // Helper to open std::ifstream safely using a UTF-8 path across platforms (especially Windows)
