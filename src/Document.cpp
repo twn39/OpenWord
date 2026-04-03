@@ -221,7 +221,8 @@ bool Document::save(gsl::czstring filepath) {
 
         std::list<std::string> zip_buffers;
         auto safe_zip_add = [&](const char *name, zip_source_t *source, zip_flags_t flags) {
-            if (!source) return;
+            if (!source)
+                return;
             if (zip_file_add(z, name, source, flags) < 0) {
                 zip_source_free(source);
             }
@@ -476,8 +477,7 @@ bool Document::save(gsl::czstring filepath) {
         std::stringstream doc_stream;
         pimpl->doc.save(doc_stream, "", pugi::format_raw);
         zip_buffers.push_back(doc_stream.str());
-        safe_zip_add("word/document.xml",
-                     zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+        safe_zip_add("word/document.xml", zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
                      ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
         pimpl->doc.child("w:document").append_attribute("openword_next_rel_id") =
             std::to_string(current_rel_id).c_str();
@@ -844,4 +844,39 @@ int openword::Document::createComment(const std::string &text, const std::string
     auto r2 = p.append_child("w:r");
     r2.append_child("w:t").text().set(text.c_str());
     return id;
+}
+
+bool openword::Document::validate(gsl::czstring partName, const openword::SchemaValidator &validator,
+                                  std::string &outErrors) const {
+    if (!validator.isValid()) {
+        outErrors = "Invalid schema validator.";
+        return false;
+    }
+
+    std::string name(partName);
+    std::stringstream stream;
+
+    if (name == "word/document.xml" || name == "document.xml") {
+        pimpl->doc.save(stream, "", pugi::format_raw);
+    } else if (name == "word/styles.xml" || name == "styles.xml") {
+        if (!pimpl->has_styles)
+            return true; // valid if not present
+        pimpl->styles_doc.save(stream, "", pugi::format_raw);
+    } else if (name == "word/numbering.xml" || name == "numbering.xml") {
+        if (!pimpl->has_numbering)
+            return true;
+        pimpl->numbering_doc.save(stream, "", pugi::format_raw);
+    } else if (name == "word/footnotes.xml" || name == "footnotes.xml") {
+        pimpl->footnotes_doc.save(stream, "", pugi::format_raw);
+    } else if (name == "word/endnotes.xml" || name == "endnotes.xml") {
+        pimpl->endnotes_doc.save(stream, "", pugi::format_raw);
+    } else if (name == "word/comments.xml" || name == "comments.xml") {
+        pimpl->comments_doc.save(stream, "", pugi::format_raw);
+    } else {
+        outErrors = "Unknown or unsupported part name for validation: " + name;
+        return false;
+    }
+
+    std::string xmlContent = stream.str();
+    return validator.validate(xmlContent.c_str(), outErrors);
 }

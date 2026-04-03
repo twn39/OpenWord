@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Validator.h"
+
 #include <gsl/gsl>
 #include <map>
 #include <memory>
@@ -549,6 +551,7 @@ class Document {
     // --- IO Operations ---
     bool save(gsl::czstring filepath);
     bool load(gsl::czstring filepath);
+    bool validate(gsl::czstring partName, const SchemaValidator &validator, std::string &outErrors) const;
 
     void setEvenAndOddHeaders(bool val = true);
 

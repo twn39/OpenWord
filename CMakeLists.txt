@@ -109,6 +109,8 @@ add_library(openword
     src/Styles.cpp
     src/Numbering.cpp
     src/MathConverter.cpp
+    src/Validator.cpp
+
 )
 
 target_include_directories(openword
@@ -150,6 +152,8 @@ target_sources(openword_test PRIVATE tests/test_mutability.cpp)
 target_sources(openword_test PRIVATE tests/test_metadata.cpp)
 target_sources(openword_test PRIVATE tests/test_styles.cpp)
 target_sources(openword_test PRIVATE tests/test_header_footer.cpp)
+target_sources(openword_test PRIVATE tests/test_validator.cpp)
+
 
 # Benchmarks
 add_executable(openword_benchmark benchmarks/bench_document.cpp)
