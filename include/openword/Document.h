@@ -542,9 +542,13 @@ class TextBox {
     void *node_;
 };
 
-enum class ChartType { Bar, Line, Pie };
+enum class ChartType { Bar, Line, Pie, Area, Scatter };
 
 enum class LegendPosition { Bottom, Top, Left, Right, None };
+
+enum class AreaGrouping { Standard, Stacked, PercentStacked };
+
+enum class ScatterStyle { Marker, SmoothMarker, LineMarker };
 
 struct ChartOptions {
     std::string title;
@@ -552,11 +556,16 @@ struct ChartOptions {
     bool showDataLabels = false;
     int widthTwips = 8000;  // approx 14 cm
     int heightTwips = 4800; // approx 8 cm
+
+    ScatterStyle scatterStyle = ScatterStyle::Marker;
+    bool smoothLines = false;
+    AreaGrouping areaGrouping = AreaGrouping::Standard;
 };
 
 struct ChartSeries {
     std::string name;
     std::vector<std::string> categories;
+    std::vector<double> xValues;
     std::vector<double> values;
     std::string colorHex; // Empty string means auto
 };

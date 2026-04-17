@@ -768,8 +768,8 @@ void test_charts() {
     barOptions.showDataLabels = true;
     barOptions.legendPos = openword::LegendPosition::Bottom;
     
-    openword::ChartSeries q1{"Q1", {"North", "South", "East", "West"}, {120.5, 95.0, 150.2, 80.0}, "4F81BD"};
-    openword::ChartSeries q2{"Q2", {"North", "South", "East", "West"}, {130.0, 105.0, 140.0, 90.0}, "C0504D"};
+    openword::ChartSeries q1{"Q1", {"North", "South", "East", "West"}, {}, {120.5, 95.0, 150.2, 80.0}, "4F81BD"};
+    openword::ChartSeries q2{"Q2", {"North", "South", "East", "West"}, {}, {130.0, 105.0, 140.0, 90.0}, "C0504D"};
     doc.addChart(openword::ChartType::Bar, {q1, q2}, barOptions);
     doc.addParagraph();
 
@@ -779,7 +779,7 @@ void test_charts() {
     lineOptions.title = "Monthly Active Users";
     lineOptions.legendPos = openword::LegendPosition::Right;
     
-    openword::ChartSeries mau{"Users", {"Jan", "Feb", "Mar", "Apr", "May"}, {1000, 1200, 1150, 1500, 1800}, "9BBB59"};
+    openword::ChartSeries mau{"Users", {"Jan", "Feb", "Mar", "Apr", "May"}, {}, {1000, 1200, 1150, 1500, 1800}, "9BBB59"};
     doc.addChart(openword::ChartType::Line, {mau}, lineOptions);
     doc.addParagraph();
 
@@ -792,8 +792,30 @@ void test_charts() {
     pieOptions.widthTwips = 6000;
     pieOptions.heightTwips = 4500;
     
-    openword::ChartSeries marketShare{"Share", {"Company A", "Company B", "Company C", "Others"}, {45, 30, 15, 10}, ""};
+    openword::ChartSeries marketShare{"Share", {"Company A", "Company B", "Company C", "Others"}, {}, {45, 30, 15, 10}, ""};
     doc.addChart(openword::ChartType::Pie, {marketShare}, pieOptions);
+
+    // 4. Area Chart
+    doc.addParagraph("4. Area Chart (Stacked)").setStyle("Heading2");
+    openword::ChartOptions areaOptions;
+    areaOptions.title = "Resource Allocation";
+    areaOptions.areaGrouping = openword::AreaGrouping::Stacked;
+    areaOptions.legendPos = openword::LegendPosition::Bottom;
+    
+    openword::ChartSeries a1{"CPU", {"App A", "App B", "App C"}, {}, {40, 25, 35}, "0000FF"};
+    openword::ChartSeries a2{"Memory", {"App A", "App B", "App C"}, {}, {60, 45, 55}, "00FF00"};
+    doc.addChart(openword::ChartType::Area, {a1, a2}, areaOptions);
+    doc.addParagraph();
+
+    // 5. Scatter Chart
+    doc.addParagraph("5. Scatter Chart (Correlation)").setStyle("Heading2");
+    openword::ChartOptions scatterOptions;
+    scatterOptions.title = "Height vs Weight Correlation";
+    scatterOptions.scatterStyle = openword::ScatterStyle::Marker;
+    scatterOptions.legendPos = openword::LegendPosition::Bottom;
+    
+    openword::ChartSeries sc1{"Measurements", {}, {165.0, 170.5, 175.2, 180.0, 185.5}, {60.5, 65.0, 72.1, 78.5, 85.0}, "FF0000"};
+    doc.addChart(openword::ChartType::Scatter, {sc1}, scatterOptions);
 
     doc.save("test_26_charts.docx");
     fmt::print("- test_26_charts.docx (Native OOXML Charts: Bar, Line, Pie)\n");

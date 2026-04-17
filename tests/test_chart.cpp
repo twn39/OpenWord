@@ -8,7 +8,7 @@ using namespace openword;
 
 TEST_CASE("Chart Creation and XML Structure", "[chart]") {
     Document doc;
-    ChartSeries s1{"Data 1", {"A", "B"}, {1.0, 2.0}, "FF0000"};
+    ChartSeries s1{"Data 1", {"A", "B"}, {}, {1.0, 2.0}, "FF0000"};
 
     ChartOptions options;
     options.title = "Test Chart Title";
@@ -20,7 +20,7 @@ TEST_CASE("Chart Creation and XML Structure", "[chart]") {
     auto chart = doc.addChart(ChartType::Pie, {s1}, options);
     
     // Add another chart to verify indexing
-    ChartSeries s2{"Data 2", {"X"}, {5.0}, "00FF00"};
+    ChartSeries s2{"Data 2", {"X"}, {}, {5.0}, "00FF00"};
     doc.addChart(ChartType::Bar, {s2});
 
     auto charts = doc.charts();
@@ -106,7 +106,7 @@ TEST_CASE("Chart Validator testing", "[chart][validator]") {
     REQUIRE(validator.isValid());
 
     Document doc;
-    ChartSeries s{"Data", {"A"}, {1.0}, ""};
+    ChartSeries s{"Data", {"A"}, {}, {1.0}, ""};
     doc.addChart(ChartType::Line, {s});
 
     std::string errs;

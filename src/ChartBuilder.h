@@ -1,6 +1,7 @@
 #pragma once
 
 #include "openword/Document.h"
+#include <gsl/span>
 #include <pugixml.hpp>
 #include <string>
 #include <vector>
@@ -41,8 +42,8 @@ private:
 
     void initializeBaseDom();
     void buildAxis();
-    pugi::xml_node buildStringCache(pugi::xml_node parent, const std::vector<std::string>& data);
-    pugi::xml_node buildNumberCache(pugi::xml_node parent, const std::vector<double>& data);
+    pugi::xml_node buildStringCache(pugi::xml_node parent, gsl::span<const std::string> data);
+    pugi::xml_node buildNumberCache(pugi::xml_node parent, gsl::span<const double> data);
 };
 
 } // namespace internal

@@ -47,18 +47,29 @@ ChartBuilder& ChartBuilder::setType(ChartType type) {
     }
 
     std::string type_tag;
-    if (type == ChartType::Bar)
-        type_tag = "c:barChart";
-    else if (type == ChartType::Line)
-        type_tag = "c:lineChart";
-    else if (type == ChartType::Pie)
-        type_tag = "c:pieChart";
+    switch (type) {
+        case ChartType::Bar:     type_tag = "c:barChart"; break;
+        case ChartType::Line:    type_tag = "c:lineChart"; break;
+        case ChartType::Pie:     type_tag = "c:pieChart"; break;
+        case ChartType::Area:    type_tag = "c:areaChart"; break;
+        case ChartType::Scatter: type_tag = "c:scatterChart"; break;
+    }
 
     typeGroup_ = plotArea_.append_child(type_tag.c_str());
 
     if (type == ChartType::Bar) {
         typeGroup_.append_child("c:barDir").append_attribute("val") = "col";
         typeGroup_.append_child("c:grouping").append_attribute("val") = "clustered";
+    } else if (type == ChartType::Area) {
+        gsl::czstring groupingStr = "standard";
+        if (options_.areaGrouping == AreaGrouping::Stacked) groupingStr = "stacked";
+        else if (options_.areaGrouping == AreaGrouping::PercentStacked) groupingStr = "percentStacked";
+        typeGroup_.append_child("c:grouping").append_attribute("val") = groupingStr;
+    } else if (type == ChartType::Scatter) {
+        gsl::czstring styleStr = "marker";
+        if (options_.scatterStyle == ScatterStyle::LineMarker) styleStr = "lineMarker";
+        else if (options_.scatterStyle == ScatterStyle::SmoothMarker) styleStr = "smoothMarker";
+        typeGroup_.append_child("c:scatterStyle").append_attribute("val") = styleStr;
     }
 
     return *this;
@@ -128,11 +139,31 @@ ChartBuilder& ChartBuilder::addSeries(const ChartSeries& series) {
     pugi::xml_node tx = ser.append_child("c:tx");
     tx.append_child("c:v").text().set(series.name.c_str());
 
-    // Color
-    if (!series.colorHex.empty()) {
-        pugi::xml_node spPr = ser.append_child("c:spPr");
-        pugi::xml_node solidFill = spPr.append_child("a:solidFill");
-        solidFill.append_child("a:srgbClr").append_attribute("val") = series.colorHex.c_str();
+    if (type_ == ChartType::Scatter) {
+        // Marker styling
+        pugi::xml_node marker = ser.append_child("c:marker");
+        marker.append_child("c:symbol").append_attribute("val") = "circle";
+        if (!series.colorHex.empty()) {
+             pugi::xml_node mSpPr = marker.append_child("c:spPr");
+             mSpPr.append_child("a:solidFill").append_child("a:srgbClr").append_attribute("val") = series.colorHex.c_str();
+             mSpPr.append_child("a:ln").append_child("a:noFill");
+        }
+        
+        // Line styling (hide line if marker-only)
+        if (options_.scatterStyle == ScatterStyle::Marker) {
+             pugi::xml_node spPr = ser.child("c:spPr");
+             if (!spPr) spPr = ser.append_child("c:spPr");
+             spPr.append_child("a:ln").append_child("a:noFill");
+        } else if (options_.scatterStyle == ScatterStyle::SmoothMarker) {
+             ser.append_child("c:smooth").append_attribute("val") = "1";
+        }
+    } else {
+        // Color
+        if (!series.colorHex.empty()) {
+            pugi::xml_node spPr = ser.append_child("c:spPr");
+            pugi::xml_node solidFill = spPr.append_child("a:solidFill");
+            solidFill.append_child("a:srgbClr").append_attribute("val") = series.colorHex.c_str();
+        }
     }
 
     // Data Labels
@@ -146,22 +177,40 @@ ChartBuilder& ChartBuilder::addSeries(const ChartSeries& series) {
         dLbls.append_child("c:showBubbleSize").append_attribute("val") = "0";
     }
 
-    // Categories
-    pugi::xml_node cat = ser.append_child("c:cat");
-    pugi::xml_node strLit = cat.append_child("c:strLit");
-    buildStringCache(strLit, series.categories);
+    if (type_ == ChartType::Scatter) {
+        // X Values (Numerical)
+        pugi::xml_node xVal = ser.append_child("c:xVal");
+        pugi::xml_node xNumLit = xVal.append_child("c:numLit");
+        xNumLit.append_child("c:formatCode").text().set("General");
+        buildNumberCache(xNumLit, series.xValues);
 
-    // Values
-    pugi::xml_node val = ser.append_child("c:val");
-    pugi::xml_node numLit = val.append_child("c:numLit");
-    numLit.append_child("c:formatCode").text().set("General");
-    buildNumberCache(numLit, series.values);
+        // Y Values (Numerical)
+        pugi::xml_node yVal = ser.append_child("c:yVal");
+        pugi::xml_node yNumLit = yVal.append_child("c:numLit");
+        yNumLit.append_child("c:formatCode").text().set("General");
+        buildNumberCache(yNumLit, series.values);
+    } else {
+        if (type_ == ChartType::Area && options_.smoothLines) {
+             ser.append_child("c:smooth").append_attribute("val") = "1";
+        }
+
+        // Categories (Strings)
+        pugi::xml_node cat = ser.append_child("c:cat");
+        pugi::xml_node strLit = cat.append_child("c:strLit");
+        buildStringCache(strLit, series.categories);
+
+        // Values (Numerical)
+        pugi::xml_node val = ser.append_child("c:val");
+        pugi::xml_node numLit = val.append_child("c:numLit");
+        numLit.append_child("c:formatCode").text().set("General");
+        buildNumberCache(numLit, series.values);
+    }
 
     seriesCount_++;
     return *this;
 }
 
-pugi::xml_node ChartBuilder::buildStringCache(pugi::xml_node parent, const std::vector<std::string>& data) {
+pugi::xml_node ChartBuilder::buildStringCache(pugi::xml_node parent, gsl::span<const std::string> data) {
     parent.append_child("c:ptCount").append_attribute("val") = std::to_string(data.size()).c_str();
     for (size_t i = 0; i < data.size(); ++i) {
         pugi::xml_node pt = parent.append_child("c:pt");
@@ -171,7 +220,7 @@ pugi::xml_node ChartBuilder::buildStringCache(pugi::xml_node parent, const std::
     return parent;
 }
 
-pugi::xml_node ChartBuilder::buildNumberCache(pugi::xml_node parent, const std::vector<double>& data) {
+pugi::xml_node ChartBuilder::buildNumberCache(pugi::xml_node parent, gsl::span<const double> data) {
     parent.append_child("c:ptCount").append_attribute("val") = std::to_string(data.size()).c_str();
     for (size_t i = 0; i < data.size(); ++i) {
         pugi::xml_node pt = parent.append_child("c:pt");
@@ -188,7 +237,7 @@ pugi::xml_node ChartBuilder::buildNumberCache(pugi::xml_node parent, const std::
 void ChartBuilder::buildAxis() {
     if (!plotArea_ || !typeGroup_) return;
 
-    if (type_ == ChartType::Bar || type_ == ChartType::Line) {
+    if (type_ == ChartType::Bar || type_ == ChartType::Line || type_ == ChartType::Area) {
         typeGroup_.append_child("c:axId").append_attribute("val") = "1936577344";
         typeGroup_.append_child("c:axId").append_attribute("val") = "1959785600";
 
@@ -221,6 +270,35 @@ void ChartBuilder::buildAxis() {
         valAx.append_child("c:crossAx").append_attribute("val") = "1936577344";
         valAx.append_child("c:crosses").append_attribute("val") = "autoZero";
         valAx.append_child("c:crossBetween").append_attribute("val") = "between";
+    } else if (type_ == ChartType::Scatter) {
+        typeGroup_.append_child("c:axId").append_attribute("val") = "1936577344"; // X-Axis (Bottom)
+        typeGroup_.append_child("c:axId").append_attribute("val") = "1959785600"; // Y-Axis (Left)
+
+        // X-Axis (Bottom, Numerical)
+        pugi::xml_node xAx = plotArea_.append_child("c:valAx");
+        xAx.append_child("c:axId").append_attribute("val") = "1936577344";
+        xAx.append_child("c:scaling").append_child("c:orientation").append_attribute("val") = "minMax";
+        xAx.append_child("c:delete").append_attribute("val") = "0";
+        xAx.append_child("c:axPos").append_attribute("val") = "b";
+        xAx.append_child("c:majorTickMark").append_attribute("val") = "none";
+        xAx.append_child("c:minorTickMark").append_attribute("val") = "none";
+        xAx.append_child("c:tickLblPos").append_attribute("val") = "nextTo";
+        xAx.append_child("c:crossAx").append_attribute("val") = "1959785600";
+        xAx.append_child("c:crosses").append_attribute("val") = "autoZero";
+
+        // Y-Axis (Left, Numerical)
+        pugi::xml_node yAx = plotArea_.append_child("c:valAx");
+        yAx.append_child("c:axId").append_attribute("val") = "1959785600";
+        yAx.append_child("c:scaling").append_child("c:orientation").append_attribute("val") = "minMax";
+        yAx.append_child("c:delete").append_attribute("val") = "0";
+        yAx.append_child("c:axPos").append_attribute("val") = "l";
+        yAx.append_child("c:majorGridlines");
+        yAx.append_child("c:majorTickMark").append_attribute("val") = "none";
+        yAx.append_child("c:minorTickMark").append_attribute("val") = "none";
+        yAx.append_child("c:tickLblPos").append_attribute("val") = "nextTo";
+        yAx.append_child("c:crossAx").append_attribute("val") = "1936577344";
+        yAx.append_child("c:crosses").append_attribute("val") = "autoZero";
+        yAx.append_child("c:crossBetween").append_attribute("val") = "between";
     }
 }
 
