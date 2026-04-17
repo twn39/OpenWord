@@ -918,7 +918,30 @@ void Document::addHtml(const std::string &html) {
 }
 
 
+std::vector<Chart> openword::Document::charts() const {
+    std::vector<Chart> result;
+    // Extract all charts across all paragraphs
+    for (auto p : pimpl->body.children("w:p")) {
+        for (auto r : p.children("w:r")) {
+            for (auto drawing : r.children("w:drawing")) {
+                if (drawing.child("wp:inline").child("a:graphic").child("a:graphicData").child("c:chart")) {
+                    result.emplace_back(drawing.internal_object());
+                }
+            }
+        }
+    }
+    return result;
+}
+
 Chart::Chart(void *node) : node_(node) {}
+
+std::string Chart::relId() const {
+    pugi::xml_node drawing = pugi::xml_node(static_cast<pugi::xml_node_struct *>(node_));
+    if (drawing) {
+        return drawing.child("wp:inline").child("a:graphic").child("a:graphicData").child("c:chart").attribute("r:id").value();
+    }
+    return "";
+}
 
 Chart Document::addChart(ChartType type, const std::vector<ChartSeries> &series, const ChartOptions &options) {
     int chart_index = pimpl->charts.size() + 1;
@@ -1028,6 +1051,26 @@ bool openword::Document::validate(gsl::czstring partName, const openword::Schema
         pimpl->endnotes_doc.save(stream, "", pugi::format_raw);
     } else if (name == "word/comments.xml" || name == "comments.xml") {
         pimpl->comments_doc.save(stream, "", pugi::format_raw);
+    } else if (name.find("word/charts/chart") == 0 || name.find("charts/chart") == 0) {
+        std::string filename = name;
+        if (filename.find("word/") == 0) {
+            filename = filename.substr(5);
+        }
+        
+        bool found = false;
+        for (const auto& chart : pimpl->charts) {
+            std::string chart_fn = chart.filename;
+            if (chart_fn.find("word/") == 0) chart_fn = chart_fn.substr(5);
+            if (chart_fn == filename) {
+                stream << chart.xml;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            outErrors = "Chart not found for validation: " + name;
+            return false;
+        }
     } else {
         outErrors = "Unknown or unsupported part name for validation: " + name;
         return false;

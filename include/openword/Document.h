@@ -564,6 +564,7 @@ struct ChartSeries {
 class Chart {
   public:
     explicit Chart(void *node);
+    std::string relId() const;
 
   private:
     void *node_;
@@ -609,6 +610,8 @@ class Document {
     Section finalSection();
     std::vector<Paragraph> paragraphs() const;
     std::vector<Table> tables() const;
+
+    std::vector<Chart> charts() const;
 
     /**
      * @brief Retrieves all footnotes in the document as a map of ID to text.
