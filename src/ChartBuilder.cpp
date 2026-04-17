@@ -285,6 +285,7 @@ void ChartBuilder::buildAxis() {
         xAx.append_child("c:tickLblPos").append_attribute("val") = "nextTo";
         xAx.append_child("c:crossAx").append_attribute("val") = "1959785600";
         xAx.append_child("c:crosses").append_attribute("val") = "autoZero";
+        xAx.append_child("c:crossBetween").append_attribute("val") = "midCat";
 
         // Y-Axis (Left, Numerical)
         pugi::xml_node yAx = plotArea_.append_child("c:valAx");
