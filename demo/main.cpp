@@ -755,6 +755,50 @@ void test_metadata_advanced() {
     fmt::print("- test_21_advanced_metadata.docx (Core, App, and Custom Metadata Properties)\n");
 }
 
+void test_charts() {
+    openword::Document doc;
+
+    doc.addParagraph("OpenWord Chart Capabilities").setStyle("Heading1");
+    doc.addParagraph("This document demonstrates native Office Open XML chart generation.");
+
+    // 1. Basic Bar Chart
+    doc.addParagraph("1. Bar Chart (Clustered)").setStyle("Heading2");
+    openword::ChartOptions barOptions;
+    barOptions.title = "Quarterly Revenue (Q1 vs Q2)";
+    barOptions.showDataLabels = true;
+    barOptions.legendPos = openword::LegendPosition::Bottom;
+    
+    openword::ChartSeries q1{"Q1", {"North", "South", "East", "West"}, {120.5, 95.0, 150.2, 80.0}, "4F81BD"};
+    openword::ChartSeries q2{"Q2", {"North", "South", "East", "West"}, {130.0, 105.0, 140.0, 90.0}, "C0504D"};
+    doc.addChart(openword::ChartType::Bar, {q1, q2}, barOptions);
+    doc.addParagraph();
+
+    // 2. Line Chart
+    doc.addParagraph("2. Line Chart (Time Series)").setStyle("Heading2");
+    openword::ChartOptions lineOptions;
+    lineOptions.title = "Monthly Active Users";
+    lineOptions.legendPos = openword::LegendPosition::Right;
+    
+    openword::ChartSeries mau{"Users", {"Jan", "Feb", "Mar", "Apr", "May"}, {1000, 1200, 1150, 1500, 1800}, "9BBB59"};
+    doc.addChart(openword::ChartType::Line, {mau}, lineOptions);
+    doc.addParagraph();
+
+    // 3. Pie Chart
+    doc.addParagraph("3. Pie Chart (Distribution)").setStyle("Heading2");
+    openword::ChartOptions pieOptions;
+    pieOptions.title = "Market Share 2026";
+    pieOptions.showDataLabels = true;
+    pieOptions.legendPos = openword::LegendPosition::Right;
+    pieOptions.widthTwips = 6000;
+    pieOptions.heightTwips = 4500;
+    
+    openword::ChartSeries marketShare{"Share", {"Company A", "Company B", "Company C", "Others"}, {45, 30, 15, 10}, ""};
+    doc.addChart(openword::ChartType::Pie, {marketShare}, pieOptions);
+
+    doc.save("test_26_charts.docx");
+    fmt::print("- test_26_charts.docx (Native OOXML Charts: Bar, Line, Pie)\n");
+}
+
 int main() {
     fmt::print("Generating capability test files...\n");
     test_basic_text();
@@ -781,6 +825,7 @@ int main() {
     test_nested_table();
     test_breaks();
     test_headers_footers();
+    test_charts();
 
     fmt::print("\nDone! Please verify test_20_watermark_toc.docx and test_21_advanced_metadata.docx.\n");
     return 0;
