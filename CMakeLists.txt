@@ -65,6 +65,7 @@ FetchContent_Declare(
     GIT_TAG        v3.13.0
 )
 FetchContent_MakeAvailable(Catch2)
+
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 
 # 8. Manual Rust Integration
@@ -111,8 +112,8 @@ add_library(openword
     src/MathConverter.cpp
     src/Validator.cpp
     src/HtmlConverter.cpp
-
-
+    src/MarkdownConverter.cpp
+    src/ChartBuilder.cpp
 )
 
 target_include_directories(openword
@@ -150,6 +151,7 @@ target_link_libraries(openword_test PRIVATE openword Catch2::Catch2WithMain zip)
 include(Catch)
 catch_discover_tests(openword_test)
 target_sources(openword_test PRIVATE tests/test_extract.cpp)
+target_sources(openword_test PRIVATE tests/test_markdown.cpp)
 target_sources(openword_test PRIVATE tests/test_mutability.cpp)
 target_sources(openword_test PRIVATE tests/test_metadata.cpp)
 target_sources(openword_test PRIVATE tests/test_styles.cpp)
@@ -157,6 +159,7 @@ target_sources(openword_test PRIVATE tests/test_header_footer.cpp)
 target_sources(openword_test PRIVATE tests/test_validator.cpp)
 target_sources(openword_test PRIVATE tests/test_template.cpp)
 target_sources(openword_test PRIVATE tests/test_html.cpp)
+target_sources(openword_test PRIVATE tests/test_chart.cpp)
 
 
 

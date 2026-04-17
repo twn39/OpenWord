@@ -1,5 +1,6 @@
 #include "DefaultStyles.h"
 #include "Internal.h"
+#include "ChartBuilder.h"
 #include <list>
 #include <openword/Document.h>
 #include <set>
@@ -44,7 +45,14 @@ struct Document::Impl {
 
     bool needs_update_fields = false;
 
-    void initialize() {
+     struct ChartData {
+        std::string xml;
+        std::string rel_id;
+        std::string filename;
+    };
+    std::vector<ChartData> charts;
+
+   void initialize() {
         auto decl = doc.append_child(pugi::node_declaration);
         decl.append_attribute("version") = "1.0";
         decl.append_attribute("encoding") = "UTF-8";
@@ -471,6 +479,15 @@ bool Document::save(gsl::czstring filepath) {
             ct += "  <Override PartName=\"/word/numbering.xml\" "
                   "ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml\"/>\n";
         }
+
+        for (const auto& chart : pimpl->charts) {
+            zip_buffers.push_back(chart.xml);
+            safe_zip_add(chart.filename.c_str(),
+                         zip_source_buffer(z, zip_buffers.back().data(), zip_buffers.back().size(), 0),
+                         ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8);
+            ct += fmt::format("  <Override PartName=\"/{}\" ContentType=\"application/vnd.openxmlformats-officedocument.drawingml.chart+xml\"/>\n", chart.filename);
+        }
+
 
         int current_rel_id = pimpl->doc.child("w:document").attribute("openword_next_rel_id").as_int(100);
         pimpl->doc.child("w:document").remove_attribute("openword_next_rel_id");
@@ -900,6 +917,66 @@ void Document::addHtml(const std::string &html) {
     parseHtmlAndInsert(html, [this]() { return this->addParagraph(); }, this);
 }
 
+
+Chart::Chart(void *node) : node_(node) {}
+
+Chart Document::addChart(ChartType type, const std::vector<ChartSeries> &series, const ChartOptions &options) {
+    int chart_index = pimpl->charts.size() + 1;
+    std::string chart_filename = fmt::format("charts/chart{}.xml", chart_index);
+    std::string target_path = fmt::format("word/{}", chart_filename);
+
+    internal::ChartBuilder builder;
+    builder.setOptions(options)
+           .setType(type)
+           .setTitle(options.title);
+
+    for (const auto& s : series) {
+        builder.addSeries(s);
+    }
+
+    std::string chart_xml = builder.buildXml();
+
+    std::string rel_id = pimpl->doc_rels.addRelationship(
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart", chart_filename);
+
+    Impl::ChartData data;
+    data.xml = chart_xml;
+    data.rel_id = rel_id;
+    data.filename = target_path;
+    pimpl->charts.push_back(data);
+
+    auto p = pimpl->body.append_child("w:p");
+    auto r = p.append_child("w:r");
+
+    int id1 = chart_index + 100;
+    int id2 = chart_index;
+    long long cx_emu = options.widthTwips * 635LL;
+    long long cy_emu = options.heightTwips * 635LL;
+    std::string drawing_markup = fmt::format(
+        R"(<w:drawing xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <wp:inline distT="0" distB="0" distL="0" distR="0">
+    <wp:extent cx="{}" cy="{}"/>
+    <wp:effectExtent l="0" t="0" r="0" b="0"/>
+    <wp:docPr id="{}" name="Chart {}"/>
+    <wp:cNvGraphicFramePr>
+      <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+    </wp:cNvGraphicFramePr>
+    <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+      <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+        <c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="{}"/>
+      </a:graphicData>
+    </a:graphic>
+  </wp:inline>
+</w:drawing>
+    )",
+        cx_emu, cy_emu, id1, id2, rel_id);
+
+    pugi::xml_document temp_doc;
+    temp_doc.load_string(drawing_markup.c_str());
+    r.append_copy(temp_doc.child("w:drawing"));
+
+    return Chart(r.child("w:drawing").internal_object());
+}
 } // namespace openword
 
 int openword::Document::createComment(const std::string &text, const std::string &author, const std::string &initials) {
@@ -959,3 +1036,48 @@ bool openword::Document::validate(gsl::czstring partName, const openword::Schema
     std::string xmlContent = stream.str();
     return validator.validate(xmlContent.c_str(), outErrors);
 }
+
+std::map<int, std::string> openword::Document::footnotes() const {
+    std::map<int, std::string> res;
+    for (auto fn : pimpl->footnotes_root.children("w:footnote")) {
+        int id = fn.attribute("w:id").as_int(-1);
+        if (id <= 0)
+            continue;
+        std::string text;
+        for (auto p : fn.children("w:p")) {
+            Paragraph para(p.internal_object());
+            if (!text.empty())
+                text += "\n";
+            std::string p_text = para.text();
+            if (!p_text.empty() && p_text.front() == ' ') {
+                p_text = p_text.substr(1);
+            }
+            text += p_text;
+        }
+        res[id] = text;
+    }
+    return res;
+}
+
+std::map<int, std::string> openword::Document::endnotes() const {
+    std::map<int, std::string> res;
+    for (auto en : pimpl->endnotes_root.children("w:endnote")) {
+        int id = en.attribute("w:id").as_int(-1);
+        if (id <= 0)
+            continue;
+        std::string text;
+        for (auto p : en.children("w:p")) {
+            Paragraph para(p.internal_object());
+            if (!text.empty())
+                text += "\n";
+            std::string p_text = para.text();
+            if (!p_text.empty() && p_text.front() == ' ') {
+                p_text = p_text.substr(1);
+            }
+            text += p_text;
+        }
+        res[id] = text;
+    }
+    return res;
+}
+
