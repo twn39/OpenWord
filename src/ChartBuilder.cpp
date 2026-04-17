@@ -65,11 +65,13 @@ ChartBuilder& ChartBuilder::setType(ChartType type) {
         if (options_.areaGrouping == AreaGrouping::Stacked) groupingStr = "stacked";
         else if (options_.areaGrouping == AreaGrouping::PercentStacked) groupingStr = "percentStacked";
         typeGroup_.append_child("c:grouping").append_attribute("val") = groupingStr;
+        typeGroup_.append_child("c:varyColors").append_attribute("val") = "0";
     } else if (type == ChartType::Scatter) {
         gsl::czstring styleStr = "marker";
         if (options_.scatterStyle == ScatterStyle::LineMarker) styleStr = "lineMarker";
         else if (options_.scatterStyle == ScatterStyle::SmoothMarker) styleStr = "smoothMarker";
         typeGroup_.append_child("c:scatterStyle").append_attribute("val") = styleStr;
+        typeGroup_.append_child("c:varyColors").append_attribute("val") = "0";
     }
 
     return *this;
@@ -137,12 +139,22 @@ ChartBuilder& ChartBuilder::addSeries(const ChartSeries& series) {
     ser.append_child("c:order").append_attribute("val") = seriesCount_;
 
     pugi::xml_node tx = ser.append_child("c:tx");
-    tx.append_child("c:v").text().set(series.name.c_str());
+    pugi::xml_node strRef = tx.append_child("c:strRef");
+    strRef.append_child("c:f"); // empty formula
+    pugi::xml_node strCache = strRef.append_child("c:strCache");
+    strCache.append_child("c:ptCount").append_attribute("val") = "1";
+    pugi::xml_node pt = strCache.append_child("c:pt");
+    pt.append_attribute("idx") = "0";
+    pt.append_child("c:v").text().set(series.name.c_str());
 
     if (type_ == ChartType::Scatter) {
+        pugi::xml_node spPr = ser.append_child("c:spPr");
+        spPr.append_child("a:ln").append_child("a:noFill");
+        
         // Marker styling
         pugi::xml_node marker = ser.append_child("c:marker");
         marker.append_child("c:symbol").append_attribute("val") = "circle";
+        marker.append_child("c:size").append_attribute("val") = "5";
         if (!series.colorHex.empty()) {
              pugi::xml_node mSpPr = marker.append_child("c:spPr");
              mSpPr.append_child("a:solidFill").append_child("a:srgbClr").append_attribute("val") = series.colorHex.c_str();
@@ -150,12 +162,10 @@ ChartBuilder& ChartBuilder::addSeries(const ChartSeries& series) {
         }
         
         // Line styling (hide line if marker-only)
-        if (options_.scatterStyle == ScatterStyle::Marker) {
-             pugi::xml_node spPr = ser.child("c:spPr");
-             if (!spPr) spPr = ser.append_child("c:spPr");
-             spPr.append_child("a:ln").append_child("a:noFill");
-        } else if (options_.scatterStyle == ScatterStyle::SmoothMarker) {
+        if (options_.scatterStyle == ScatterStyle::SmoothMarker) {
              ser.append_child("c:smooth").append_attribute("val") = "1";
+        } else {
+             ser.append_child("c:smooth").append_attribute("val") = "0";
         }
     } else {
         // Color
@@ -269,7 +279,11 @@ void ChartBuilder::buildAxis() {
         valAx.append_child("c:tickLblPos").append_attribute("val") = "nextTo";
         valAx.append_child("c:crossAx").append_attribute("val") = "1936577344";
         valAx.append_child("c:crosses").append_attribute("val") = "autoZero";
-        valAx.append_child("c:crossBetween").append_attribute("val") = "between";
+        if (type_ == ChartType::Bar) {
+            valAx.append_child("c:crossBetween").append_attribute("val") = "between";
+        } else {
+            valAx.append_child("c:crossBetween").append_attribute("val") = "midCat";
+        }
     } else if (type_ == ChartType::Scatter) {
         typeGroup_.append_child("c:axId").append_attribute("val") = "1936577344"; // X-Axis (Bottom)
         typeGroup_.append_child("c:axId").append_attribute("val") = "1959785600"; // Y-Axis (Left)
@@ -299,7 +313,7 @@ void ChartBuilder::buildAxis() {
         yAx.append_child("c:tickLblPos").append_attribute("val") = "nextTo";
         yAx.append_child("c:crossAx").append_attribute("val") = "1936577344";
         yAx.append_child("c:crosses").append_attribute("val") = "autoZero";
-        yAx.append_child("c:crossBetween").append_attribute("val") = "between";
+        yAx.append_child("c:crossBetween").append_attribute("val") = "midCat";
     }
 }
 
