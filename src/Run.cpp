@@ -363,3 +363,31 @@ openword::Run &openword::Run::addPageBreak() {
     br.append_attribute("w:type") = "page";
     return *this;
 }
+
+bool openword::Run::isFootnoteReference() const {
+    auto n = cast_node(node_);
+    return static_cast<bool>(n.child("w:footnoteReference"));
+}
+
+int openword::Run::footnoteId() const {
+    auto n = cast_node(node_);
+    auto ref = n.child("w:footnoteReference");
+    if (ref) {
+        return ref.attribute("w:id").as_int(-1);
+    }
+    return -1;
+}
+
+bool openword::Run::isEndnoteReference() const {
+    auto n = cast_node(node_);
+    return static_cast<bool>(n.child("w:endnoteReference"));
+}
+
+int openword::Run::endnoteId() const {
+    auto n = cast_node(node_);
+    auto ref = n.child("w:endnoteReference");
+    if (ref) {
+        return ref.attribute("w:id").as_int(-1);
+    }
+    return -1;
+}

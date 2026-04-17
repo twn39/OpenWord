@@ -186,7 +186,6 @@ class Header {
     Paragraph addParagraph(const std::string &text = "");
     void addHtml(const std::string &html);
 
-
   private:
     void *node_;
 };
@@ -196,7 +195,6 @@ class Footer {
     explicit Footer(void *node);
     Paragraph addParagraph(const std::string &text = "");
     void addHtml(const std::string &html);
-
 
   private:
     void *node_;
@@ -305,6 +303,11 @@ class Run {
     bool isStrike() const;
     HighlightColor highlightColor() const;
     std::string text() const;
+
+    bool isFootnoteReference() const;
+    int footnoteId() const;
+    bool isEndnoteReference() const;
+    int endnoteId() const;
 
   private:
     void *node_;
@@ -532,9 +535,35 @@ class TextBox {
     Paragraph addParagraph(const std::string &text = "");
     void addHtml(const std::string &html);
 
-
     TextBox &setFillColor(const std::string &hexColor);
     TextBox &setLineColor(const std::string &hexColor);
+
+  private:
+    void *node_;
+};
+
+enum class ChartType { Bar, Line, Pie };
+
+enum class LegendPosition { Bottom, Top, Left, Right, None };
+
+struct ChartOptions {
+    std::string title;
+    LegendPosition legendPos = LegendPosition::Bottom;
+    bool showDataLabels = false;
+    int widthTwips = 8000;  // approx 14 cm
+    int heightTwips = 4800; // approx 8 cm
+};
+
+struct ChartSeries {
+    std::string name;
+    std::vector<std::string> categories;
+    std::vector<double> values;
+    std::string colorHex; // Empty string means auto
+};
+
+class Chart {
+  public:
+    explicit Chart(void *node);
 
   private:
     void *node_;
@@ -581,12 +610,24 @@ class Document {
     std::vector<Paragraph> paragraphs() const;
     std::vector<Table> tables() const;
 
+    /**
+     * @brief Retrieves all footnotes in the document as a map of ID to text.
+     */
+    std::map<int, std::string> footnotes() const;
+
+    /**
+     * @brief Retrieves all endnotes in the document as a map of ID to text.
+     */
+    std::map<int, std::string> endnotes() const;
+
     void setMetadata(const Metadata &meta);
     Metadata metadata() const;
 
     void addTableOfContents(gsl::czstring title = "Table of Contents", int max_levels = 3,
                             TOCLeader leader = TOCLeader::Dot);
     void addWatermark(const std::string &text);
+
+    Chart addChart(ChartType type, const std::vector<ChartSeries> &series, const ChartOptions &options = ChartOptions());
 
     int createFootnote(const std::string &text);
     /**
