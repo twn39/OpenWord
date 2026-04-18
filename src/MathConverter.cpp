@@ -14,6 +14,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <mutex>
 
 // C-linkage to Rust functions
 extern "C" {
@@ -161,8 +162,6 @@ std::string sanitize_omml(const std::string &raw_omml) {
     doc.save(writer, "", pugi::format_raw);
     return writer.result;
 }
-
-#include <mutex>
 
 // ... inside namespace {
 
